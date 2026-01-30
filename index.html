@@ -51,6 +51,9 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 /* 申請分頁內的小工具樣式 */
 .request-input-group { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
 .small-label { font-size: 0.75rem; color: var(--subtext); margin-bottom: 4px; display: block; }
+.req-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 5px; }
+.req-btns { display: flex; gap: 5px; }
+.mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; border: none; color: white; }
 </style>
 </head>
 <body class="dark-theme">
@@ -81,7 +84,7 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 <input type="text" id="target-friend-id" placeholder="Ex: 123456">
 <button class="btn" style="padding: 8px; margin-top: 5px;" id="send-request-btn" data-i18n="btn_confirm">確認</button>
 </div>
-<div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">尚無申請</div>
+<div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">載入中...</div>
 </div>
 </div>
 </div>
@@ -170,7 +173,7 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
@@ -189,7 +192,7 @@ const provider = new GoogleAuthProvider();
 // --- 語言包 ---
 const i18n = {
 "zh-TW": {
-not_logged_in: "未登入", friend_list: "好友列表 / 申請", history: "歷史成績",
+not_logged_in: "未登入", history: "歷史成績",
 tab_account: "帳號", tab_display: "顯示", tab_timer: "計時器",
 login_google: "使用 Google 登入", label_name: "名字", label_id: "ID",
 save_btn: "儲存修改", logout_btn: "登出帳號", label_theme: "主題",
@@ -197,10 +200,11 @@ label_lang: "語言", label_start_method: "開始方法", opt_kb: "快捷鍵 (�
 opt_tc: "觸控開始", label_inspection: "15秒觀察", opt_off: "關閉",
 opt_on: "開啟 (15s)", label_decimals: "小數點位數", del_confirm: "確定刪除？",
 save_success: "存檔成功", id_limit: "三週內只能修改兩次 ID！", msg_scramble: "打亂公式：\n",
-label_friends: "好友", label_requests: "申請", label_target_id: "對方ID", btn_confirm: "確認"
+label_friends: "好友", label_requests: "申請", label_target_id: "對方ID", btn_confirm: "確認",
+err_not_found: "找不到該用戶", err_self: "不能加自己為好友", msg_req_sent: "申請已發送", btn_accept: "接受", btn_delete: "刪除"
 },
 "zh-CN": {
-not_logged_in: "未登录", friend_list: "好友列表 / 申请", history: "历史成绩",
+not_logged_in: "未登录", history: "历史成绩",
 tab_account: "账号", tab_display: "显示", tab_timer: "计时器",
 login_google: "使用 Google 登录", label_name: "名字", label_id: "ID",
 save_btn: "保存修改", logout_btn: "登出账号", label_theme: "主题",
@@ -208,10 +212,11 @@ label_lang: "语言", label_start_method: "开始方法", opt_kb: "快捷键 (�
 opt_tc: "觸控开始", label_inspection: "15秒观察", opt_off: "关闭",
 opt_on: "开启 (15s)", label_decimals: "小数点位数", del_confirm: "确定删除？",
 save_success: "保存成功", id_limit: "三周内只能修改两次 ID！", msg_scramble: "打乱公式：\n",
-label_friends: "好友", label_requests: "申请", label_target_id: "對方ID", btn_confirm: "确认"
+label_friends: "好友", label_requests: "申请", label_target_id: "對方ID", btn_confirm: "确认",
+err_not_found: "找不到该用户", err_self: "不能加自己为好友", msg_req_sent: "申请已发送", btn_accept: "接受", btn_delete: "删除"
 },
 "en": {
-not_logged_in: "Guest", friend_list: "Friends / Requests", history: "History",
+not_logged_in: "Guest", history: "History",
 tab_account: "Account", tab_display: "Display", tab_timer: "Timer",
 login_google: "Login with Google", label_name: "Name", label_id: "ID",
 save_btn: "Save Changes", logout_btn: "Logout", label_theme: "Theme",
@@ -219,10 +224,11 @@ label_lang: "Language", label_start_method: "Start Method", opt_kb: "Keyboard (S
 opt_tc: "Touch Start", label_inspection: "Inspection", opt_off: "OFF",
 opt_on: "ON (15s)", label_decimals: "Decimals", del_confirm: "Are you sure?",
 save_success: "Saved!", id_limit: "ID can only be changed twice every 3 weeks!", msg_scramble: "Scramble:\n",
-label_friends: "Friends", label_requests: "Requests", label_target_id: "Target ID", btn_confirm: "Confirm"
+label_friends: "Friends", label_requests: "Requests", label_target_id: "Target ID", btn_confirm: "Confirm",
+err_not_found: "User not found", err_self: "Cannot add yourself", msg_req_sent: "Request sent", btn_accept: "Accept", btn_delete: "Delete"
 },
 "ja": {
-not_logged_in: "未ログイン", friend_list: "フレンド / 申請", history: "履歴",
+not_logged_in: "未ログイン", history: "履歴",
 tab_account: "アカウント", tab_display: "表示", tab_timer: "タイマー",
 login_google: "Googleでログイン", label_name: "名前", label_id: "ID",
 save_btn: "変更を保存", logout_btn: "ログアウト", label_theme: "テーマ",
@@ -230,7 +236,8 @@ label_lang: "言語", label_start_method: "開始方法", opt_kb: "キーボー�
 opt_tc: "タッチ開始", label_inspection: "インスペクション", opt_off: "オフ",
 opt_on: "オン (15s)", label_decimals: "小数点以下", del_confirm: "削除しますか？",
 save_success: "保存しました", id_limit: "IDの変更は3週間に2回までです！", msg_scramble: "スクランブル：\n",
-label_friends: "フレンド", label_requests: "申請", label_target_id: "相手ID", btn_confirm: "確認"
+label_friends: "フレンド", label_requests: "申請", label_target_id: "相手ID", btn_confirm: "確認",
+err_not_found: "ユーザーが見つかりません", err_self: "自分は追加できません", msg_req_sent: "申請を送りました", btn_accept: "承認", btn_delete: "削除"
 }
 };
 
@@ -381,26 +388,76 @@ insInterval = setInterval(() => { left--; display.innerText = left; if(left<=0) 
 }
 };
 
-// --- Firebase 核心修正區 ---
+// --- 好友系統核心 ---
+async function renderRequests(incoming) {
+const ui = document.getElementById('requests-list-ui');
+if(!incoming || incoming.length === 0) { ui.innerText = "尚無申請"; return; }
+ui.innerHTML = "";
+for(let uid of incoming) {
+const snap = await getDoc(doc(db, "users", uid));
+const d = snap.data();
+const div = document.createElement('div');
+div.className = "req-item";
+div.innerHTML = `<span>${d.displayName} (#${d.customID})</span>
+<div class="req-btns">
+<button class="mini-btn" style="background:var(--go)" onclick="handleFriend('${uid}', 'accept')">${i18n[currentLang].btn_accept}</button>
+<button class="mini-btn" style="background:var(--ready)" onclick="handleFriend('${uid}', 'reject')">${i18n[currentLang].btn_delete}</button>
+</div>`;
+ui.appendChild(div);
+}
+}
+
+async function renderFriends(friends) {
+const ui = document.getElementById('friends-list-ui');
+if(!friends || friends.length === 0) { ui.innerText = "尚無好友"; return; }
+ui.innerHTML = "";
+for(let uid of friends) {
+const snap = await getDoc(doc(db, "users", uid));
+const d = snap.data();
+const div = document.createElement('div');
+div.className = "req-item";
+div.innerHTML = `<span>${d.displayName} (#${d.customID})</span>`;
+ui.appendChild(div);
+}
+}
+
+window.handleFriend = async (targetUid, action) => {
+const myRef = doc(db, "users", currentUser.uid);
+const targetRef = doc(db, "users", targetUid);
+if(action === 'accept') {
+await updateDoc(myRef, { friends: arrayUnion(targetUid), incomingRequests: arrayRemove(targetUid) });
+await updateDoc(targetRef, { friends: arrayUnion(currentUser.uid) });
+} else {
+await updateDoc(myRef, { incomingRequests: arrayRemove(targetUid) });
+}
+};
+
+document.getElementById('send-request-btn').onclick = async () => {
+if(!currentUser) return;
+const targetID = document.getElementById('target-friend-id').value;
+const q = query(collection(db, "users"), where("customID", "==", targetID));
+const snap = await getDocs(q);
+if(snap.empty) return alert(i18n[currentLang].err_not_found);
+const targetDoc = snap.docs[0];
+if(targetDoc.id === currentUser.uid) return alert(i18n[currentLang].err_self);
+await updateDoc(doc(db, "users", targetDoc.id), { incomingRequests: arrayUnion(currentUser.uid) });
+alert(i18n[currentLang].msg_req_sent);
+document.getElementById('target-friend-id').value = "";
+};
+
+// --- Firebase 核心監聽 ---
 onAuthStateChanged(auth, async user => {
 if(user) {
 currentUser = user;
 document.getElementById('login-section').style.display = 'none';
 document.getElementById('profile-section').style.display = 'block';
 document.getElementById('display-name-sidebar').innerText = user.displayName || "User";
-document.getElementById('display-id-sidebar').innerText = "#Loading...";
 
 const userRef = doc(db, "users", user.uid);
 const snap = await getDoc(userRef);
 
 if(!snap.exists()){
-const initialData = {
-displayName: user.displayName || "Cuber",
-customID: user.uid.slice(0, 6),
-allData: {},
-idUpdates: []
-};
-await setDoc(userRef, initialData);
+await setDoc(userRef, { displayName: user.displayName || "Cuber", customID: user.uid.slice(0, 6), allData: {}, idUpdates: [], friends: [], incomingRequests: [] });
 }
 
 onSnapshot(userRef, s => {
@@ -412,6 +469,8 @@ document.getElementById('display-id-sidebar').innerText = "#" + d.customID;
 document.getElementById('name-input').value = d.displayName;
 document.getElementById('id-input').value = d.customID;
 renderSolves();
+renderRequests(d.incomingRequests);
+renderFriends(d.friends);
 }
 });
 } else {
@@ -422,6 +481,8 @@ document.getElementById('profile-section').style.display = 'none';
 document.getElementById('display-name-sidebar').innerText = i18n[currentLang].not_logged_in;
 document.getElementById('display-id-sidebar').innerText = "#Guest";
 document.getElementById('solve-list-ui').innerHTML = "";
+document.getElementById('requests-list-ui').innerText = "請先登入";
+document.getElementById('friends-list-ui').innerText = "請先登入";
 renderSolves();
 }
 });
@@ -437,18 +498,12 @@ const data = snap.data();
 let updates = data.idUpdates || [];
 const now = Date.now();
 updates = updates.filter(t => now - t < 21 * 24 * 60 * 60 * 1000);
-
 const newID = document.getElementById('id-input').value;
 if(data.customID !== newID){
 if(updates.length >= 2) return alert(i18n[currentLang].id_limit);
 updates.push(now);
 }
-
-await updateDoc(userRef, { 
-displayName: document.getElementById('name-input').value, 
-customID: newID, 
-idUpdates: updates 
-});
+await updateDoc(userRef, { displayName: document.getElementById('name-input').value, customID: newID, idUpdates: updates });
 alert(i18n[currentLang].save_success);
 };
 
@@ -456,7 +511,6 @@ document.getElementById('event-selector').onchange = (e) => { currentEvent = e.t
 document.getElementById('hide-sidebar-btn').onclick = () => { document.getElementById('social-bar').classList.add('collapsed'); document.getElementById('show-sidebar-btn').style.display='flex'; };
 document.getElementById('show-sidebar-btn').onclick = () => { document.getElementById('social-bar').classList.remove('collapsed'); document.getElementById('show-sidebar-btn').style.display='none'; };
 
-// 初始化
 updateLanguage();
 generateScramble();
 </script>
