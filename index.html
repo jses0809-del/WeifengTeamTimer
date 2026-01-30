@@ -2,202 +2,182 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>WeiFeng Timer - Social Pro</title>
+    <title>WeiFeng Timer - Social UI</title>
     <style>
         :root { --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa; }
         body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
 
-        /* 左側社交列 */
-        #left-bar { width: 320px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 100; }
-        .bar-header { padding: 15px; display: flex; gap: 15px; align-items: center; background: rgba(0,0,0,0.2); }
-        .icon-btn { font-size: 24px; cursor: pointer; background: none; border: none; color: white; padding: 5px; transition: 0.2s; }
-        .icon-btn:hover { color: var(--accent); }
+        /* 左側社交導航欄 */
+        #social-bar { width: 300px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; }
+        .nav-header { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.3); align-items: center; }
+        .icon-btn { font-size: 20px; cursor: pointer; background: #333; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .icon-btn:hover { background: var(--accent); }
 
-        /* 好友動態與聊天區 */
-        .content-area { flex: 1; overflow-y: auto; padding: 15px; }
-        .section-label { font-size: 0.75rem; color: #666; text-transform: uppercase; margin: 15px 0 5px; letter-spacing: 1px; }
-        .friend-card { background: #2a2a2a; padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .friend-time { color: #2ed573; font-weight: bold; font-family: monospace; }
+        /* 好友列表 */
+        .friend-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .friend-item { padding: 12px; background: #2a2a2a; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
+        .friend-item:hover { background: #353535; border-left: 4px solid var(--accent); }
+        .friend-name { font-weight: bold; display: block; }
+        .friend-id-tag { font-size: 0.7rem; color: #888; }
 
-        /* 設定彈窗 (用側滑) */
-        #settings-overlay { position: fixed; left: -320px; top: 0; width: 320px; height: 100%; background: #181818; transition: 0.3s; z-index: 200; padding: 25px; box-sizing: border-box; }
-        #settings-overlay.active { left: 0; }
+        /* 右側主區域 (計時器/聊天室) */
+        #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; }
         
-        /* 加好友彈窗 */
-        #add-friend-modal { position: fixed; left: -320px; top: 0; width: 320px; height: 100%; background: #181818; transition: 0.3s; z-index: 199; padding: 25px; box-sizing: border-box; }
-        #add-friend-modal.active { left: 0; }
+        /* 聊天室覆蓋層 (點擊好友後出現) */
+        #chat-window { 
+            position: absolute; right: 0; top: 0; width: 100%; height: 100%; 
+            background: var(--bg); z-index: 50; display: none; flex-direction: column;
+        }
+        #chat-window.active { display: flex; }
+        .chat-header { padding: 15px; background: var(--panel); display: flex; align-items: center; gap: 15px; }
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; }
+        .solve-history { background: #1a1a1a; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
 
-        /* 中間計時區 */
-        #timer-zone { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
-        #timer-display { font-size: 15vw; font-weight: bold; font-variant-numeric: tabular-nums; }
-        #scramble { position: absolute; top: 50px; text-align: center; width: 80%; color: #888; font-size: 1.2rem; }
+        /* 設定彈窗 */
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                 background: var(--panel); padding: 25px; border-radius: 12px; z-index: 1000; 
+                 display: none; width: 300px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .modal.active { display: block; }
+        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:999; display:none; }
+        .overlay.active { display:block; }
 
-        /* 通用元件 */
-        input { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 6px; margin-bottom: 10px; box-sizing: border-box; }
-        .action-btn { background: var(--accent); border: none; color: white; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
-        .logout-btn { background: #444; margin-top: 20px; }
-        .chat-msg { font-size: 0.85rem; padding: 5px; border-bottom: 1px solid #222; }
+        /* 計時器樣式 */
+        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; }
+        input { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 5px; margin: 10px 0; box-sizing: border-box; }
+        .btn { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="settings-overlay">
-    <div style="display:flex; justify-content: space-between; align-items:center">
-        <h3>個人設定</h3>
-        <button class="icon-btn" onclick="toggleMenu('settings-overlay')">✕</button>
-    </div>
-    <label style="font-size:0.8rem; color:#888">顯示名字</label>
-    <input type="text" id="name-input">
-    <label style="font-size:0.8rem; color:#888">專屬 ID</label>
-    <input type="text" id="id-input">
-    <button class="action-btn" id="save-profile">儲存修改</button>
-    <button class="action-btn logout-btn" id="logout-btn">登出帳號</button>
-</div>
+<div class="overlay" id="modal-overlay"></div>
 
-<div id="add-friend-modal">
-    <div style="display:flex; justify-content: space-between; align-items:center">
-        <h3>新增好友</h3>
-        <button class="icon-btn" onclick="toggleMenu('add-friend-modal')">✕</button>
+<div id="social-bar">
+    <div class="nav-header">
+        <button class="icon-btn" title="項目切換">☰</button>
+        <button class="icon-btn" onclick="openModal('modal-add')" title="加好友">＋</button>
+        <button class="icon-btn" onclick="openModal('modal-settings')" title="設定">⚙️</button>
     </div>
-    <input type="text" id="search-id" placeholder="輸入好友的專屬 ID...">
-    <button class="action-btn" id="confirm-add">發送好友請求</button>
-</div>
-
-<div id="left-bar">
-    <div class="bar-header">
-        <button class="icon-btn" onclick="toggleMenu('settings-overlay')">☰</button>
-        <button class="icon-btn" onclick="toggleMenu('add-friend-modal')">＋</button>
-        <div id="my-name" style="margin-left:auto; font-size:0.9rem; color:var(--accent)">未登入</div>
-    </div>
-    <div class="content-area">
-        <div class="section-label">好友即時成績</div>
-        <div id="friends-list"></div>
-
-        <div class="section-label" style="margin-top:30px">好友聊天訊息</div>
-        <div id="chat-list" style="background:#121212; border-radius:8px; height:200px; overflow-y:auto; padding:10px;"></div>
-        <input type="text" id="chat-input" placeholder="傳訊息給好友..." style="margin-top:10px">
+    <div class="friend-list" id="friend-list-ui">
+        <div style="color:#555; text-align:center; margin-top:20px;">登入後查看好友</div>
     </div>
 </div>
 
-<div id="timer-zone">
-    <div id="scramble">載入中...</div>
+<div id="main-stage">
+    <div id="scramble" style="padding:40px; text-align:center; color:#888;">載入打亂中...</div>
     <div id="timer-display">0.000</div>
-    <div id="login-prompt" style="position:absolute; bottom:20px;">
-        <button id="login-btn" style="background:none; border:1px solid #444; color:#888; padding:5px 15px; border-radius:20px; cursor:pointer">Google 登入同步數據</button>
+
+    <div id="chat-window">
+        <div class="chat-header">
+            <button class="icon-btn" onclick="closeChat()">←</button>
+            <div>
+                <span id="chat-friend-name" style="font-weight:bold">好友姓名</span>
+                <div id="chat-friend-id" style="font-size:0.7rem; color:#888">#ID</div>
+            </div>
+        </div>
+        <div class="chat-body">
+            <div class="section-label">該好友最近成績</div>
+            <div id="friend-solves-display" class="solve-history">尚未有成績數據</div>
+            
+            <div class="section-label">聊天訊息</div>
+            <div id="chat-messages" style="height:200px; overflow-y:auto; margin-bottom:10px; border-bottom:1px solid #333;"></div>
+            <input type="text" id="msg-input" placeholder="傳送訊息...">
+        </div>
     </div>
+</div>
+
+<div class="modal" id="modal-settings">
+    <h3>⚙️ 設定</h3>
+    <label>更改名字</label>
+    <input type="text" id="name-input">
+    <label>更改專屬 ID</label>
+    <input type="text" id="id-input">
+    <button class="btn" id="save-profile" style="margin-bottom:10px">儲存修改</button>
+    <button class="btn" id="login-btn" style="background:#444">Google 登入</button>
+    <button class="btn" id="logout-btn" style="background:#c0392b; display:none">登出</button>
+    <button class="btn" onclick="closeAllModals()" style="background:none; margin-top:5px">關閉</button>
+</div>
+
+<div class="modal" id="modal-add">
+    <h3>＋ 新增好友</h3>
+    <input type="text" id="search-id" placeholder="輸入好友 ID (英數)">
+    <button class="btn" id="confirm-add">送出請求</button>
+    <button class="btn" onclick="closeAllModals()" style="background:none; margin-top:5px">取消</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, onSnapshot, collection, query, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
-        authDomain: "weifengtimer-17ea9.firebaseapp.com",
-        projectId: "weifengtimer-17ea9",
-        storageBucket: "weifengtimer-17ea9.firebasestorage.app",
-        messagingSenderId: "852083740797",
-        appId: "1:852083740797:web:4b2326142554cf8654a114"
-    };
-
+    const firebaseConfig = { /* ... 貼上你的 Config ... */ };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
     let currentUser = null;
-    let myData = {};
 
-    // --- 介面切換 ---
-    window.toggleMenu = (id) => {
-        document.getElementById(id).classList.toggle('active');
+    // --- 介面邏輯 ---
+    window.openModal = (id) => {
+        document.getElementById('modal-overlay').classList.add('active');
+        document.getElementById(id).classList.add('active');
     };
+    window.closeAllModals = () => {
+        document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
+    };
+    window.closeChat = () => document.getElementById('chat-window').classList.remove('active');
 
-    // --- 核心社交邏輯 ---
-    document.getElementById('save-profile').onclick = async () => {
-        const name = document.getElementById('name-input').value;
-        const cid = document.getElementById('id-input').value.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if(currentUser) {
-            await updateDoc(doc(db, "users", currentUser.uid), { displayName: name, customID: cid });
-            alert("設定已同步！");
-            toggleMenu('settings-overlay');
+    // --- 點擊好友 ID 進入聊天 ---
+    window.openFriendDetail = async (uid, name, cid) => {
+        document.getElementById('chat-friend-name').innerText = name;
+        document.getElementById('chat-friend-id').innerText = "#" + cid;
+        document.getElementById('chat-window').classList.add('active');
+        
+        // 抓取該好友的成績
+        const snap = await getDoc(doc(db, "users", uid));
+        if(snap.exists()) {
+            const data = snap.data();
+            const solves = data.solves || [];
+            document.getElementById('friend-solves-display').innerHTML = solves.slice(0,5).map(s => `<div>${s.time}s</div>`).join('') || "尚無成績";
         }
     };
 
-    document.getElementById('logout-btn').onclick = () => {
-        if(confirm("確定要登出嗎？")) {
-            signOut(auth).then(() => location.reload());
-        }
-    };
-
-    document.getElementById('confirm-add').onclick = async () => {
-        const id = document.getElementById('search-id').value;
-        const q = query(collection(db, "users"), where("customID", "==", id));
-        const snap = await getDocs(q);
-        if(!snap.empty) {
-            await updateDoc(doc(db, "users", currentUser.uid), { friends: arrayUnion(snap.docs[0].id) });
-            alert("好友已加入！");
-            toggleMenu('add-friend-modal');
-        } else { alert("找不到該 ID"); }
-    };
-
-    // --- 聊天訊息邏輯 ---
-    document.getElementById('chat-input').onkeydown = async (e) => {
-        if (e.key === 'Enter' && e.target.value.trim() && currentUser) {
-            await setDoc(doc(collection(db, "messages")), {
-                text: e.target.value,
-                sender: myData.displayName || currentUser.displayName,
-                time: Date.now()
-            });
-            e.target.value = "";
-        }
-    };
-
-    // 監聽登入與即時同步
+    // --- 登入與設定 ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
             const userRef = doc(db, "users", user.uid);
-            const docSnap = await getDoc(userRef);
+            const snap = await getDoc(userRef);
             
-            if (!docSnap.exists()) {
-                await setDoc(userRef, { displayName: user.displayName, customID: "user"+Date.now().toString().slice(-4), friends: [] });
+            if (snap.exists()) {
+                const data = snap.data();
+                document.getElementById('name-input').value = data.displayName;
+                document.getElementById('id-input').value = data.customID;
+                if(data.friends) syncFriendList(data.friends);
             }
-            
-            onSnapshot(userRef, (s) => {
-                myData = s.data();
-                document.getElementById('my-name').innerText = myData.displayName;
-                document.getElementById('name-input').value = myData.displayName;
-                document.getElementById('id-input').value = myData.customID;
-                if(myData.friends?.length > 0) listenFriends(myData.friends);
-            });
-
-            // 監聽聊天室 (限最近 20 則)
-            const chatQ = query(collection(db, "messages"), orderBy("time", "desc"), limit(20));
-            onSnapshot(chatQ, (s) => {
-                const list = document.getElementById('chat-list');
-                list.innerHTML = s.docs.reverse().map(d => `<div class="chat-msg"><b>${d.data().sender}:</b> ${d.data().text}</div>`).join('');
-                list.scrollTop = list.scrollHeight;
-            });
-
-            document.getElementById('login-prompt').style.display = "none";
+            document.getElementById('login-btn').style.display = "none";
+            document.getElementById('logout-btn').style.display = "block";
         }
     });
 
-    function listenFriends(uids) {
-        onSnapshot(query(collection(db, "users"), where("__name__", "in", uids)), (s) => {
-            document.getElementById('friends-list').innerHTML = s.docs.map(d => `
-                <div class="friend-card">
-                    <span>${d.data().displayName}</span>
-                    <span class="friend-time">${d.data().lastTime?.toFixed(3) || '0.000'}</span>
+    function syncFriendList(uids) {
+        if(!uids.length) return;
+        const q = query(collection(db, "users"), where("__name__", "in", uids));
+        onSnapshot(q, (s) => {
+            const list = document.getElementById('friend-list-ui');
+            list.innerHTML = s.docs.map(d => `
+                <div class="friend-item" onclick="openFriendDetail('${d.id}', '${d.data().displayName}', '${d.data().customID}')">
+                    <span class="friend-name">${d.data().displayName}</span>
+                    <span class="friend-id-tag">#${d.data().customID}</span>
                 </div>
             `).join('');
         });
     }
 
-    // (計時核心與打亂邏輯省略，與前版本相同)
     document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
+    document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>location.reload());
+
+    // (其餘計時核心 Space 鍵邏輯保持不變...)
 </script>
 </body>
 </html>
