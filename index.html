@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>WeiFeng Timer - Final Pro</title>
+    <title>WeiFeng Timer - Professional Final</title>
     <style>
         :root { 
             --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa; 
@@ -20,13 +20,21 @@
 
         /* 主畫面 */
         #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; text-align: center; }
-        #scramble { padding: 30px; font-size: 1.3rem; min-height: 80px; max-width: 85%; margin: 0 auto; color: var(--subtext); line-height: 1.5; }
-        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; }
+        #scramble { padding: 25px; font-size: 1.2rem; min-height: 70px; max-width: 85%; margin: 0 auto; color: var(--subtext); line-height: 1.4; }
+        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; transition: color 0.1s; }
         
+        /* 統計區 */
+        #stats-bar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 30px; background: rgba(0,0,0,0.4); padding: 10px 30px; border-radius: 50px; }
+        #stats-bar b { color: var(--accent); }
+
         /* 歷史成績 */
-        #history-panel { width: 220px; background: rgba(0,0,0,0.2); padding: 15px; border-left: 1px solid #333; overflow-y: auto; }
-        .solve-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333; font-size: 0.9rem; cursor: pointer; }
-        .solve-item:hover { background: rgba(255,255,255,0.05); }
+        #history-panel { width: 240px; background: rgba(0,0,0,0.2); padding: 15px; border-left: 1px solid #333; overflow-y: auto; }
+        .solve-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #333; font-size: 0.9rem; }
+        .del-btn { color: #ff4757; cursor: pointer; padding: 0 5px; font-weight: bold; }
+
+        /* 好友列表 */
+        .friend-item { padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+        .friend-item:hover { background: var(--accent); }
 
         /* 設定視窗 */
         .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 15px; z-index: 3000; display: none; width: 350px; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
@@ -56,7 +64,8 @@
         <div id="display-name" style="font-weight:bold;">未登入</div>
         <div id="display-id" style="font-size:0.8rem; color:var(--accent);">#Guest</div>
     </div>
-    <div id="friend-list-ui" style="flex:1; padding:10px;"></div>
+    <div style="padding:15px; font-size:0.8rem; color:#666;">好友列表</div>
+    <div id="friend-list-ui" style="flex:1; padding:10px; overflow-y:auto;"></div>
 </div>
 
 <div id="main-stage">
@@ -67,9 +76,13 @@
             <option value="444">4x4x4</option><option value="pyram">金字塔</option>
             <option value="minx">五魔方</option>
         </select>
-        <div id="scramble">正在生成打亂公式...</div>
+        <div id="scramble">正在載入...</div>
     </div>
     <div id="timer-display">0.000</div>
+    <div id="stats-bar">
+        <div>AO5: <b id="ao5-val">--</b></div>
+        <div>AO12: <b id="ao12-val">--</b></div>
+    </div>
 </div>
 
 <div id="history-panel">
@@ -89,40 +102,30 @@
             <button class="btn" id="login-btn">使用 Google 登入</button>
         </div>
         <div id="profile-section" style="display:none;">
-            <label>顯示名字</label><input type="text" id="name-input">
-            <label>專屬 ID</label><input type="text" id="id-input">
+            <label>名字</label><input type="text" id="name-input">
+            <label>ID</label><input type="text" id="id-input">
             <button class="btn" id="save-profile">儲存修改</button>
             <button class="btn" id="logout-btn" style="background:#444">登出</button>
         </div>
     </div>
 
     <div id="tab-display" class="tab-content">
-        <label>主題模式</label>
-        <select id="theme-select" onchange="document.body.className=this.value+'-theme'">
-            <option value="dark">深色專業</option>
-            <option value="light">明亮模式</option>
-        </select>
-        <label>語言</label><select><option>繁體中文</option></select>
-        <div style="display:flex; justify-content:space-between; margin:15px 0;">
-            顯示打亂公式 <input type="checkbox" id="show-scramble-toggle" checked style="width:20px;">
-        </div>
+        <label>主題</label>
+        <select onchange="document.body.className=this.value+'-theme'"><option value="dark">深色</option><option value="light">明亮</option></select>
+        <div style="display:flex; justify-content:space-between; margin:15px 0;">顯示打亂 <input type="checkbox" id="scramble-toggle" checked style="width:20px;"></div>
     </div>
 
     <div id="tab-timer" class="tab-content">
-        <label>開始方式</label>
-        <select id="start-mode"><option value="keyboard">空白鍵</option><option value="touch">觸控/點擊</option></select>
-        <label>觀察時間 (秒)</label>
-        <select id="inspection-select"><option value="0">關閉</option><option value="15">15 秒</option></select>
-        <label>小數點位數</label>
-        <select id="decimal-select"><option value="2">2 位</option><option value="3" selected>3 位</option></select>
+        <label>觀察時間</label><select id="ins-select"><option value="0">關閉</option><option value="15">15 秒</option></select>
+        <label>小數點位數</label><select id="dec-select"><option value="2">2 位</option><option value="3" selected>3 位</option></select>
     </div>
-    <button class="btn" onclick="closeAllModals()" style="background:none; color:var(--subtext)">關閉設定</button>
+    <button class="btn" onclick="closeAllModals()" style="background:none; color:var(--subtext)">關閉</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
@@ -138,10 +141,19 @@
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-    let currentUser = null, allData = {}, currentEvent = "333", currentScrambleText = "";
-    let timerState = "IDLE", startTime, timerInterval, inspectionVal = 0, inspectionInterval;
+    let currentUser = null, allData = {}, currentEvent = "333", currentScramble = "";
+    let timerState = "IDLE", startTime, timerInterval, holdTimeout, inspectionTimeout;
 
-    // --- 打亂生成 ---
+    // --- 打亂邏輯 ---
+    const genMoves = (moves, len) => {
+        let res = [], last = "";
+        for(let i=0; i<len; i++){
+            let m = moves[Math.floor(Math.random()*moves.length)];
+            while(m === last) m = moves[Math.floor(Math.random()*moves.length)];
+            res.push(m + ["","'","2"][Math.floor(Math.random()*3)]); last = m;
+        }
+        return res.join(" ");
+    };
     const scramblers = {
         "333": () => genMoves(["U","D","L","R","F","B"], 20),
         "222": () => genMoves(["U","R","F"], 9),
@@ -152,81 +164,68 @@
             return s;
         },
         "minx": () => {
-            let s = "";
-            for(let i=0; i<7; i++){
+            let s = ""; for(let i=0; i<7; i++){
                 for(let j=0; j<10; j++) s += (Math.random()>0.5?"R++ ":"R-- ") + (Math.random()>0.5?"D++ ":"D-- ");
                 s += "U\n";
-            }
-            return s;
+            } return s;
         }
     };
-    function genMoves(moves, len) {
-        let res = [], last = "";
-        for(let i=0; i<len; i++){
-            let m = moves[Math.floor(Math.random()*moves.length)];
-            while(m === last) m = moves[Math.floor(Math.random()*moves.length)];
-            res.push(m + ["","'","2"][Math.floor(Math.random()*3)]);
-            last = m;
-        }
-        return res.join(" ");
-    }
     function generateScramble() {
-        currentScrambleText = (scramblers[currentEvent] || scramblers["333"])();
-        document.getElementById('scramble').innerText = document.getElementById('show-scramble-toggle').checked ? currentScrambleText : "--- 已隱藏 ---";
+        currentScramble = (scramblers[currentEvent] || scramblers["333"])();
+        document.getElementById('scramble').innerText = document.getElementById('scramble-toggle').checked ? currentScramble : "---";
     }
 
-    // --- 介面切換 ---
+    // --- UI 與 數據 ---
     window.switchTab = (e, id) => {
         document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
-        e.target.classList.add('active');
-        document.getElementById(id).classList.add('active');
+        e.target.classList.add('active'); document.getElementById(id).classList.add('active');
     };
     window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
     window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
 
-    // --- 數據渲染 ---
     function renderHistory() {
-        const list = allData[currentEvent] || [];
-        document.getElementById('solve-list-ui').innerHTML = list.map(s => `
-            <div class="solve-item"><b>${s.time.toFixed(document.getElementById('decimal-select').value)}s</b> <small>${new Date(s.id).toLocaleTimeString()}</small></div>
+        const solves = allData[currentEvent] || [];
+        const dec = document.getElementById('dec-select').value;
+        document.getElementById('solve-list-ui').innerHTML = solves.map((s, idx) => `
+            <div class="solve-item"><b>${s.time.toFixed(dec)}s</b><span class="del-btn" onclick="deleteSolve(${idx})">✕</span></div>
         `).join('');
+        
+        const avg = (n) => {
+            if(solves.length < n) return "--";
+            const lastN = solves.slice(0, n).map(s => s.time);
+            return (lastN.reduce((a,b)=>a+b, 0)/n).toFixed(3);
+        };
+        document.getElementById('ao5-val').innerText = avg(5);
+        document.getElementById('ao12-val').innerText = avg(12);
     }
 
-    // --- 計時核心 ---
-    const timerDisplay = document.getElementById('timer-display');
+    window.deleteSolve = (idx) => {
+        if(confirm("刪除這筆成績？")) {
+            allData[currentEvent].splice(idx, 1);
+            renderHistory();
+            if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
+        }
+    };
+
+    // --- 計時器核心 (含亮燈預備) ---
+    const display = document.getElementById('timer-display');
     function stopTimer() {
-        clearInterval(timerInterval);
-        timerState = "IDLE";
-        const finalTime = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
+        clearInterval(timerInterval); timerState = "IDLE";
+        const time = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
         if(!allData[currentEvent]) allData[currentEvent] = [];
-        allData[currentEvent].unshift({ time: finalTime, id: Date.now(), scramble: currentScrambleText });
-        renderHistory();
+        allData[currentEvent].unshift({ time, id: Date.now() });
+        renderHistory(); generateScramble();
         if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
-        generateScramble();
-        timerDisplay.style.color = "var(--text)";
+        display.style.color = "var(--text)";
     }
 
     function startTimer() {
-        clearInterval(inspectionInterval);
+        clearInterval(inspectionTimeout);
         startTime = performance.now();
         timerInterval = setInterval(() => {
-            const now = (performance.now() - startTime) / 1000;
-            timerDisplay.innerText = now.toFixed(document.getElementById('decimal-select').value);
+            display.innerText = ((performance.now()-startTime)/1000).toFixed(document.getElementById('dec-select').value);
         }, 10);
-        timerState = "RUNNING";
-        timerDisplay.style.color = "var(--text)";
-    }
-
-    function runInspection() {
-        let left = parseInt(document.getElementById('inspection-select').value);
-        timerState = "INSPECTION";
-        timerDisplay.style.color = "var(--ready)";
-        timerDisplay.innerText = left;
-        inspectionInterval = setInterval(() => {
-            left--;
-            timerDisplay.innerText = left;
-            if(left <= 0) startTimer();
-        }, 1000);
+        timerState = "RUNNING"; display.style.color = "var(--text)";
     }
 
     window.onkeydown = (e) => {
@@ -234,12 +233,27 @@
             e.preventDefault();
             if(timerState === "RUNNING") stopTimer();
             else if(timerState === "IDLE") {
-                if(document.getElementById('inspection-select').value > 0) runInspection(); else startTimer();
+                timerState = "READY"; display.style.color = "var(--ready)";
+                holdTimeout = setTimeout(() => {
+                    timerState = "GO"; display.style.color = "var(--go)"; display.innerText = "0.000";
+                }, 500);
             } else if(timerState === "INSPECTION") startTimer();
         }
     };
+    window.onkeyup = (e) => {
+        if(e.code === 'Space'){
+            clearTimeout(holdTimeout);
+            if(timerState === "GO") {
+                const ins = document.getElementById('ins-select').value;
+                if(ins > 0) {
+                    timerState = "INSPECTION"; let left = ins; display.style.color = "var(--ready)";
+                    inspectionTimeout = setInterval(() => { left--; display.innerText = left; if(left<=0) startTimer(); }, 1000);
+                } else startTimer();
+            } else { timerState = "IDLE"; display.style.color = "var(--text)"; }
+        }
+    };
 
-    // --- 帳號與 Firebase ---
+    // --- Firebase 社交 ---
     onAuthStateChanged(auth, async user => {
         if(user) {
             currentUser = user;
@@ -247,18 +261,29 @@
             document.getElementById('profile-section').style.display = 'block';
             onSnapshot(doc(db, "users", user.uid), s => {
                 if(s.exists()){
-                    const d = s.data();
-                    allData = d.allData || {};
+                    const d = s.data(); allData = d.allData || {};
                     document.getElementById('display-name').innerText = d.displayName;
                     document.getElementById('display-id').innerText = "#" + d.customID;
-                    renderHistory();
+                    document.getElementById('name-input').value = d.displayName;
+                    document.getElementById('id-input').value = d.customID;
+                    renderHistory(); if(d.friends?.length) syncFriends(d.friends);
                 }
             });
         }
     });
 
+    function syncFriends(uids) {
+        const q = query(collection(db, "users"), where("__name__", "in", uids));
+        onSnapshot(q, s => {
+            document.getElementById('friend-list-ui').innerHTML = s.docs.map(d => `
+                <div class="friend-item"><b>${d.data().displayName}</b><br><small>#${d.data().customID}</small></div>
+            `).join('');
+        });
+    }
+
     document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
     document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>location.reload());
+    document.getElementById('save-profile').onclick = () => updateDoc(doc(db, "users", currentUser.uid), { displayName: document.getElementById('name-input').value, customID: document.getElementById('id-input').value }).then(()=>alert("已儲存"));
     document.getElementById('event-selector').onchange = (e) => { currentEvent = e.target.value; generateScramble(); renderHistory(); };
     document.getElementById('hide-sidebar-btn').onclick = () => { document.getElementById('social-bar').classList.add('collapsed'); document.getElementById('show-sidebar-btn').style.display='flex'; };
     document.getElementById('show-sidebar-btn').onclick = () => { document.getElementById('social-bar').classList.remove('collapsed'); document.getElementById('show-sidebar-btn').style.display='none'; };
