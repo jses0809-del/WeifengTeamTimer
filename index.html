@@ -2,95 +2,123 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>WeiFeng Timer - 完整社交功能版</title>
+    <title>WeiFeng Timer - Professional Social Edition</title>
     <style>
         :root { --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa; --ready: #ff4757; --go: #2ed573; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; user-select: none; }
 
-        /* 左側社交導航欄 */
-        #social-bar { width: 300px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 100; }
+        /* 左側社交欄 - 支援收合 */
+        #social-bar { width: 320px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 1000; transition: transform 0.3s ease; }
+        #social-bar.collapsed { transform: translateX(-320px); position: absolute; height: 100%; }
+        
         .nav-header { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.3); align-items: center; }
-        .icon-btn { font-size: 20px; cursor: pointer; background: #333; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .icon-btn { font-size: 20px; cursor: pointer; background: #333; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .icon-btn:hover { background: var(--accent); }
 
-        /* 好友列表 */
-        .friend-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .friend-item { padding: 12px; background: #2a2a2a; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
-        .friend-item:hover { background: #353535; }
-        .friend-name { font-weight: bold; display: block; }
-        .friend-id-tag { font-size: 0.75rem; color: var(--accent); }
+        /* 右側主計時區 */
+        #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; transition: margin-left 0.3s ease; }
+        
+        /* 頂部打亂與項目選擇 */
+        #top-info { padding: 20px; text-align: center; }
+        #scramble { font-size: 1.4rem; color: #aaa; margin-bottom: 10px; min-height: 50px; }
+        #event-selector { background: #333; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
 
-        /* 右側計時區 */
-        #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; }
-        #scramble { padding: 40px; text-align: center; color: #888; font-size: 1.2rem; min-height: 60px; word-wrap: break-word; }
+        /* 計時器主體 */
         #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; }
 
-        /* 聊天視窗 (點擊好友後展開) */
-        #chat-window { position: absolute; right: 0; top: 0; width: 100%; height: 100%; background: var(--bg); z-index: 500; display: none; flex-direction: column; }
+        /* 成績統計區域 (AO5, AO12) */
+        #stats-bar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 40px; background: rgba(0,0,0,0.5); padding: 10px 30px; border-radius: 50px; font-size: 1.2rem; }
+        .stat-item span { color: var(--accent); font-weight: bold; }
+
+        /* 歷史成績 (右側小欄) */
+        #history-panel { width: 180px; background: rgba(0,0,0,0.2); padding: 15px; overflow-y: auto; border-left: 1px solid #333; }
+        .solve-item { padding: 5px 0; border-bottom: 1px solid #333; font-family: monospace; font-size: 0.9rem; display: flex; justify-content: space-between; }
+
+        /* 好友詳細視窗 */
+        #chat-window { position: absolute; right: 0; top: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: none; flex-direction: column; }
         #chat-window.active { display: flex; }
-        .chat-header { padding: 15px; background: var(--panel); display: flex; align-items: center; gap: 15px; }
 
         /* 彈窗樣式 */
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 12px; z-index: 1000; display: none; width: 300px; box-shadow: 0 0 30px rgba(0,0,0,0.7); }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 12px; z-index: 3000; display: none; width: 320px; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
         .modal.active { display: block; }
-        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:999; display:none; }
+        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2500; display:none; }
         .overlay.active { display:block; }
 
-        input { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 5px; margin: 10px 0; box-sizing: border-box; }
-        .btn { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px; }
+        input { width: 100%; padding: 12px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 6px; margin: 10px 0; box-sizing: border-box; }
+        .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+        
+        /* 側邊三行按鈕(獨立出現在左上角以便收回後還能點開) */
+        #toggle-sidebar-btn { position: absolute; left: 15px; top: 15px; z-index: 1100; }
     </style>
 </head>
 <body>
 
-<div class="overlay" id="modal-overlay" onclick="closeAllModals()"></div>
+<div class="overlay" id="modal-overlay"></div>
 
 <div id="social-bar">
     <div class="nav-header">
-        <button class="icon-btn" id="btn-event">☰</button>
-        <button class="icon-btn" id="btn-add">＋</button>
-        <button class="icon-btn" id="btn-set">⚙️</button>
+        <button class="icon-btn" id="hide-sidebar-btn">☰</button>
+        <button class="icon-btn" id="open-add-modal">＋</button>
+        <button class="icon-btn" id="open-set-modal">⚙️</button>
     </div>
-    <div class="friend-list" id="friend-list-ui">
-        <div style="color:#555; text-align:center; margin-top:20px;">請先登入帳號</div>
+    <div style="padding: 15px; font-weight: bold; color: #666; font-size: 0.8rem;">好友列表</div>
+    <div id="friend-list-ui" style="flex:1; overflow-y:auto; padding:10px;">
+        <div style="text-align:center; color:#444; margin-top:20px;">登入以同步好友</div>
     </div>
 </div>
 
 <div id="main-stage">
-    <div id="scramble">正在生成打亂公式...</div>
+    <button class="icon-btn" id="show-sidebar-btn" style="position:absolute; left:15px; top:15px; display:none;">☰</button>
+    
+    <div id="top-info">
+        <select id="event-selector">
+            <option value="333">3x3x3</option>
+            <option value="222">2x2x2</option>
+            <option value="444">4x4x4</option>
+            <option value="oh">3x3 OH</option>
+        </select>
+        <div id="scramble">正在準備打亂公式...</div>
+    </div>
+
     <div id="timer-display">0.000</div>
 
+    <div id="stats-bar">
+        <div class="stat-item">AO5: <span id="ao5-val">--</span></div>
+        <div class="stat-item">AO12: <span id="ao12-val">--</span></div>
+    </div>
+
     <div id="chat-window">
-        <div class="chat-header">
+        <div style="padding:20px; background:#1a1a1a; display:flex; align-items:center; gap:15px;">
             <button class="icon-btn" onclick="closeChat()">←</button>
-            <div>
-                <span id="chat-friend-name" style="font-weight:bold">好友姓名</span>
-                <div id="chat-friend-id" style="font-size:0.7rem; color:var(--accent)">#ID</div>
-            </div>
+            <h3 id="chat-friend-name" style="margin:0">好友名字</h3>
         </div>
         <div style="flex:1; padding:20px; overflow-y:auto;">
-            <div style="color:#888; margin-bottom:10px;">好友最近成績：</div>
-            <div id="friend-solves" style="background:#1a1a1a; padding:15px; border-radius:10px; margin-bottom:20px;"></div>
-            <div style="color:#888; margin-bottom:10px;">聊天訊息：</div>
-            <div id="chat-msgs" style="height:200px; overflow-y:auto; background:#111; padding:10px; border-radius:5px;"></div>
-            <input type="text" id="msg-input" placeholder="輸入訊息...">
+            <h4>好友近期成績</h4>
+            <div id="friend-solves-list" style="background:#111; padding:15px; border-radius:10px;"></div>
         </div>
     </div>
 </div>
 
+<div id="history-panel">
+    <div style="font-weight:bold; margin-bottom:10px;">個人成績</div>
+    <div id="solve-list-ui"></div>
+</div>
+
 <div class="modal" id="modal-settings">
     <h3>⚙️ 帳號設定</h3>
-    <label>名字</label><input type="text" id="name-input">
-    <label>唯一 ID</label><input type="text" id="id-input">
+    <input type="text" id="name-input" placeholder="名字">
+    <input type="text" id="id-input" placeholder="專屬 ID (英數)">
     <button class="btn" id="save-profile">儲存修改</button>
-    <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
-    <button class="btn" id="login-btn">Google 登入</button>
+    <button class="btn" id="login-btn" style="background:#444">Google 登入</button>
     <button class="btn" id="logout-btn" style="background:#c0392b; display:none;">登出</button>
+    <button class="btn" onclick="closeAllModals()" style="background:transparent; color:#888;">取消</button>
 </div>
 
 <div class="modal" id="modal-add">
     <h3>＋ 新增好友</h3>
-    <input type="text" id="search-id" placeholder="輸入好友的英文數字 ID">
-    <button class="btn" id="confirm-add">送出申請</button>
+    <input type="text" id="search-id" placeholder="輸入好友專屬 ID">
+    <button class="btn" id="confirm-add">發送請求</button>
+    <button class="btn" onclick="closeAllModals()" style="background:transparent; color:#888;">取消</button>
 </div>
 
 <script type="module">
@@ -113,9 +141,22 @@
     const provider = new GoogleAuthProvider();
 
     let currentUser = null;
+    let mySolves = [];
     let timerState = "IDLE", startTime, timerInterval, holdTimeout;
 
-    // --- 介面控制函式 ---
+    // --- 三行選單收合邏輯 ---
+    const socialBar = document.getElementById('social-bar');
+    const showBtn = document.getElementById('show-sidebar-btn');
+    document.getElementById('hide-sidebar-btn').onclick = () => {
+        socialBar.classList.add('collapsed');
+        showBtn.style.display = 'flex';
+    };
+    showBtn.onclick = () => {
+        socialBar.classList.remove('collapsed');
+        showBtn.style.display = 'none';
+    };
+
+    // --- 彈窗邏輯 ---
     const openModal = (id) => {
         document.getElementById('modal-overlay').classList.add('active');
         document.getElementById(id).classList.add('active');
@@ -125,91 +166,108 @@
     };
     window.closeChat = () => document.getElementById('chat-window').classList.remove('active');
 
-    document.getElementById('btn-set').onclick = () => openModal('modal-settings');
-    document.getElementById('btn-add').onclick = () => openModal('modal-add');
+    document.getElementById('open-set-modal').onclick = () => openModal('modal-settings');
+    document.getElementById('open-add-modal').onclick = () => openModal('modal-add');
 
-    // --- 計時核心 ---
-    const display = document.getElementById('timer-display');
-    const handleDown = () => {
-        if (timerState === "RUNNING") stopTimer();
-        else if (timerState === "IDLE") {
-            timerState = "READY";
-            display.style.color = "var(--ready)";
-            holdTimeout = setTimeout(() => {
-                timerState = "GO";
-                display.style.color = "var(--go)";
-                display.innerText = "0.000";
-            }, 500);
-        }
+    // --- 計時核心與數據計算 ---
+    const timerDisplay = document.getElementById('timer-display');
+    
+    function calcAvg(n) {
+        if (mySolves.length < n) return "--";
+        const recent = mySolves.slice(0, n).map(s => s.time);
+        const sum = recent.reduce((a, b) => a + b, 0);
+        return (sum / n).toFixed(3);
+    }
+
+    function updateStatsUI() {
+        document.getElementById('ao5-val').innerText = calcAvg(5);
+        document.getElementById('ao12-val').innerText = calcAvg(12);
+        document.getElementById('solve-list-ui').innerHTML = mySolves.slice(0, 20).map(s => `
+            <div class="solve-item"><span>${s.time.toFixed(3)}</span><small>${new Date(s.id).toLocaleTimeString()}</small></div>
+        `).join('');
+    }
+
+    const startTimer = () => {
+        startTime = performance.now();
+        timerInterval = setInterval(() => {
+            timerDisplay.innerText = ((performance.now() - startTime) / 1000).toFixed(3);
+        }, 10);
+        timerState = "RUNNING";
+        timerDisplay.style.color = "var(--text)";
     };
-    const handleUp = () => {
-        clearTimeout(holdTimeout);
-        if (timerState === "GO") {
-            startTime = performance.now();
-            timerInterval = setInterval(() => {
-                display.innerText = ((performance.now() - startTime) / 1000).toFixed(3);
-            }, 10);
-            timerState = "RUNNING";
-            display.style.color = "var(--text)";
-        } else {
-            timerState = "IDLE";
-            display.style.color = "var(--text)";
-        }
-    };
+
     const stopTimer = () => {
         clearInterval(timerInterval);
         timerState = "IDLE";
         const time = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
+        mySolves.unshift({ time, id: Date.now() });
+        updateStatsUI();
         if(currentUser) {
-            updateDoc(doc(db, "users", currentUser.uid), {
-                solves: arrayUnion({ time, id: Date.now() }),
-                lastTime: time
-            });
+            updateDoc(doc(db, "users", currentUser.uid), { solves: mySolves });
         }
         generateScramble();
     };
 
-    window.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); handleDown(); } });
-    window.addEventListener('keyup', (e) => { if(e.code === 'Space') { e.preventDefault(); handleUp(); } });
-
-    // --- 好友與社交 ---
-    window.openFriendDetail = async (uid, name, cid) => {
-        document.getElementById('chat-friend-name').innerText = name;
-        document.getElementById('chat-friend-id').innerText = "#" + cid;
-        document.getElementById('chat-window').classList.add('active');
-        const snap = await getDoc(doc(db, "users", uid));
-        if(snap.exists()) {
-            const solves = snap.data().solves || [];
-            document.getElementById('friend-solves').innerHTML = solves.slice(-5).reverse().map(s => `<div>${s.time.toFixed(3)}s</div>`).join('') || "尚無成績";
+    window.onkeydown = (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if (timerState === "RUNNING") stopTimer();
+            else if (timerState === "IDLE") {
+                timerState = "READY";
+                timerDisplay.style.color = "var(--ready)";
+                holdTimeout = setTimeout(() => {
+                    timerState = "GO";
+                    timerDisplay.style.color = "var(--go)";
+                    timerDisplay.innerText = "0.000";
+                }, 500);
+            }
         }
     };
 
-    // --- 帳號邏輯 ---
+    window.onkeyup = (e) => {
+        if (e.code === 'Space') {
+            clearTimeout(holdTimeout);
+            if (timerState === "GO") startTimer();
+            else { timerState = "IDLE"; timerDisplay.style.color = "var(--text)"; }
+        }
+    };
+
+    // --- 社交與 Firebase ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
             const userRef = doc(db, "users", user.uid);
-            const snap = await getDoc(userRef);
-            if (!snap.exists()) {
-                await setDoc(userRef, { displayName: user.displayName, customID: "id"+Date.now().toString().slice(-4), friends: [], solves: [] });
-            }
-            const data = (await getDoc(userRef)).data();
-            document.getElementById('name-input').value = data.displayName;
-            document.getElementById('id-input').value = data.customID;
+            onSnapshot(userRef, (s) => {
+                const data = s.data();
+                mySolves = data.solves || [];
+                updateStatsUI();
+                document.getElementById('name-input').value = data.displayName || "";
+                document.getElementById('id-input').value = data.customID || "";
+                if(data.friends?.length > 0) syncFriends(data.friends);
+            });
             document.getElementById('login-btn').style.display = "none";
             document.getElementById('logout-btn').style.display = "block";
-            if(data.friends?.length > 0) {
-                onSnapshot(query(collection(db, "users"), where("__name__", "in", data.friends)), (s) => {
-                    document.getElementById('friend-list-ui').innerHTML = s.docs.map(d => `
-                        <div class="friend-item" onclick="openFriendDetail('${d.id}', '${d.data().displayName}', '${d.data().customID}')">
-                            <span class="friend-name">${d.data().displayName}</span>
-                            <span class="friend-id-tag">#${d.data().customID}</span>
-                        </div>
-                    `).join('');
-                });
-            }
         }
     });
+
+    function syncFriends(uids) {
+        const q = query(collection(db, "users"), where("__name__", "in", uids));
+        onSnapshot(q, (s) => {
+            document.getElementById('friend-list-ui').innerHTML = s.docs.map(d => `
+                <div class="solve-item" style="cursor:pointer; padding:10px; background:#2a2a2a; border-radius:5px; margin-bottom:5px;" 
+                     onclick="showFriend('${d.data().displayName}', '${JSON.stringify(d.data().solves || []).replace(/"/g, '&quot;')}')">
+                    <b>${d.data().displayName}</b> <small>#${d.data().customID}</small>
+                </div>
+            `).join('');
+        });
+    }
+
+    window.showFriend = (name, solvesStr) => {
+        const solves = JSON.parse(solvesStr);
+        document.getElementById('chat-friend-name').innerText = name;
+        document.getElementById('friend-solves-list').innerHTML = solves.slice(0,10).map(s => `<div>${s.time}s</div>`).join('') || "無成績";
+        document.getElementById('chat-window').classList.add('active');
+    };
 
     document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
     document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
@@ -218,7 +276,7 @@
             displayName: document.getElementById('name-input').value,
             customID: document.getElementById('id-input').value
         });
-        alert("設定已儲存！");
+        alert("存檔成功");
         closeAllModals();
     };
 
