@@ -53,14 +53,15 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 .req-btns { display: flex; gap: 5px; }
 .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; border: none; color: white; }
 
+/* 側邊欄內部聊天介面 CSS */
 #sidebar-chat-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel); display: none; flex-direction: column; z-index: 10; }
 #sidebar-chat-view.active { display: flex; }
-#chat-back-btn { padding: 15px; cursor: pointer; background: rgba(0,0,0,0.2); border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
+#chat-back-btn { padding: 15px; cursor: pointer; background: rgba(0,0,0,0.2); border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; font-weight: bold; }
 #chat-msgs-container { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.side-msg { max-width: 85%; padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; line-height: 1.3; position: relative; }
+.side-msg { max-width: 85%; padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; line-height: 1.3; position: relative; word-break: break-word; }
 .side-msg.mine { align-self: flex-end; background: var(--accent); color: #fff; cursor: pointer; }
 .side-msg.theirs { align-self: flex-start; background: #333; color: #fff; }
-.chat-input-row { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #333; }
+.chat-input-row { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #333; background: var(--panel); }
 </style>
 </head>
 <body class="dark-theme">
@@ -248,7 +249,7 @@ function handleDown(e) { if(e.type === 'keydown' && e.code !== 'Space') return; 
 function handleUp(e) { if(e.type === 'keyup' && e.code !== 'Space') return; if(e.type === 'touchend' && document.getElementById('start-method').value !== 'tc') return; clearTimeout(holdTimeout); if(timerState === "GO") { const ins = document.getElementById('inspection-select').value; if(ins > 0) { timerState = "INSPECTION"; let left = ins; display.style.color = "var(--ready)"; display.innerText = left; insInterval = setInterval(() => { left--; display.innerText = left; if(left<=0) startTimer(); }, 1000); } else { startTimer(); } } else if(timerState === "READY") { timerState = "IDLE"; display.style.color = "var(--text)"; } }
 window.onkeydown = handleDown; window.onkeyup = handleUp; document.addEventListener('touchstart', handleDown, {passive: false}); document.addEventListener('touchend', handleUp, {passive: false});
 
-// --- 好友與即時聊天 (含刪除好友/編輯刪除訊息) ---
+// --- 好友與即時聊天 (側邊欄內部切換) ---
 let chatUnsubscribe = null, currentChatUid = null;
 
 async function renderRequests(incoming) {
@@ -266,14 +267,14 @@ const ui = document.getElementById('friends-list-ui'); if(!friends || friends.le
 ui.innerHTML = "";
 for(let uid of friends) {
 const snap = await getDoc(doc(db, "users", uid)); const d = snap.data(); const div = document.createElement('div'); div.className = "req-item";
-div.innerHTML = `<span onclick="openSidebarChat('${uid}', '${d.displayName}')" style="flex:1;">${d.displayName} (#${d.customID})</span><span class="del-btn" style="margin-left:10px;" onclick="removeFriend(event, '${uid}')">✕</span>`;
+// 點擊名字區塊觸發側邊欄聊天室
+div.innerHTML = `<span onclick="openSidebarChat('${uid}', '${d.displayName}')" style="flex:1; cursor:pointer;">${d.displayName} (#${d.customID})</span><span class="del-btn" style="margin-left:10px;" onclick="removeFriend(event, '${uid}')">✕</span>`;
 ui.appendChild(div);
 }
 }
 
 window.removeFriend = async (e, targetUid) => {
-e.stopPropagation();
-if(!confirm(i18n[currentLang].del_confirm)) return;
+e.stopPropagation(); if(!confirm(i18n[currentLang].del_confirm)) return;
 const myRef = doc(db, "users", currentUser.uid); const targetRef = doc(db, "users", targetUid);
 await updateDoc(myRef, { friends: arrayRemove(targetUid) });
 await updateDoc(targetRef, { friends: arrayRemove(currentUser.uid) });
@@ -292,14 +293,25 @@ if(snap.empty) return alert(i18n[currentLang].err_not_found); const targetDoc = 
 await updateDoc(doc(db, "users", targetDoc.id), { incomingRequests: arrayUnion(currentUser.uid) }); alert(i18n[currentLang].msg_req_sent); document.getElementById('target-friend-id').value = "";
 };
 
+// 核心功能：開啟側邊欄聊天視窗
 async function openSidebarChat(uid, name) {
-currentChatUid = uid; document.getElementById('chat-title-name').innerText = name; document.getElementById('sidebar-friends-view').style.display = 'none'; document.getElementById('sidebar-chat-view').classList.add('active');
-const chatId = [currentUser.uid, uid].sort().join("_"); const chatRef = collection(db, "chats", chatId, "messages"); const q = query(chatRef, orderBy("timestamp", "asc"));
+currentChatUid = uid; 
+document.getElementById('chat-title-name').innerText = name; 
+// 隱藏列表視圖，顯示聊天視圖
+document.getElementById('sidebar-friends-view').style.display = 'none'; 
+document.getElementById('sidebar-chat-view').classList.add('active');
+
+const chatId = [currentUser.uid, uid].sort().join("_"); 
+const chatRef = collection(db, "chats", chatId, "messages"); 
+const q = query(chatRef, orderBy("timestamp", "asc"));
+
 if(chatUnsubscribe) chatUnsubscribe();
 chatUnsubscribe = onSnapshot(q, (snapshot) => {
-    const container = document.getElementById('chat-msgs-container'); container.innerHTML = "";
+    const container = document.getElementById('chat-msgs-container'); 
+    container.innerHTML = "";
     snapshot.forEach(d => {
-        const msg = d.data(); const div = document.createElement('div'); div.className = `side-msg ${msg.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
+        const msg = d.data(); const div = document.createElement('div'); 
+        div.className = `side-msg ${msg.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
         div.innerText = msg.text;
         if(msg.senderId === currentUser.uid) { div.onclick = () => showMessageMenu(chatId, d.id, msg.text); }
         container.appendChild(div);
@@ -307,6 +319,14 @@ chatUnsubscribe = onSnapshot(q, (snapshot) => {
     container.scrollTop = container.scrollHeight;
 });
 }
+
+// 核心功能：關閉側邊欄聊天視窗 (返回好友列表)
+window.closeSidebarChat = () => { 
+    if(chatUnsubscribe) chatUnsubscribe(); 
+    currentChatUid = null; 
+    document.getElementById('sidebar-chat-view').classList.remove('active'); 
+    document.getElementById('sidebar-friends-view').style.display = 'flex'; 
+};
 
 function showMessageMenu(chatId, msgId, oldText) {
     const action = prompt(`[${i18n[currentLang].edit}/${i18n[currentLang].delete}]\n1: ${i18n[currentLang].edit}\n2: ${i18n[currentLang].delete}`);
@@ -317,8 +337,6 @@ function showMessageMenu(chatId, msgId, oldText) {
         if(confirm(i18n[currentLang].del_confirm)) deleteDoc(doc(db, "chats", chatId, "messages", msgId));
     }
 }
-
-window.closeSidebarChat = () => { if(chatUnsubscribe) chatUnsubscribe(); currentChatUid = null; document.getElementById('sidebar-chat-view').classList.remove('active'); document.getElementById('sidebar-friends-view').style.display = 'flex'; };
 
 document.getElementById('side-chat-send').onclick = sendChatMessage;
 document.getElementById('side-chat-input').onkeydown = (e) => { if(e.key==='Enter') sendChatMessage(); };
