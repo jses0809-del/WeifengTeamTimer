@@ -47,6 +47,10 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 .side-tab-nav { display: flex; border-bottom: 1px solid #333; margin-bottom: 10px; }
 .side-tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.85rem; transition: 0.2s; }
 .side-tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
+
+/* 申請分頁內的小工具樣式 */
+.request-input-group { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
+.small-label { font-size: 0.75rem; color: var(--subtext); margin-bottom: 4px; display: block; }
 </style>
 </head>
 <body class="dark-theme">
@@ -72,6 +76,11 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 <div id="friends-list-ui" style="color: var(--subtext); font-size: 0.9rem;">尚無好友</div>
 </div>
 <div id="tab-requests" class="tab-pane">
+<div class="request-input-group">
+<span class="small-label" data-i18n="label_target_id">對方ID</span>
+<input type="text" id="target-friend-id" placeholder="Ex: 123456">
+<button class="btn" style="padding: 8px; margin-top: 5px;" id="send-request-btn" data-i18n="btn_confirm">確認</button>
+</div>
 <div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">尚無申請</div>
 </div>
 </div>
@@ -188,7 +197,7 @@ label_lang: "語言", label_start_method: "開始方法", opt_kb: "快捷鍵 (�
 opt_tc: "觸控開始", label_inspection: "15秒觀察", opt_off: "關閉",
 opt_on: "開啟 (15s)", label_decimals: "小數點位數", del_confirm: "確定刪除？",
 save_success: "存檔成功", id_limit: "三週內只能修改兩次 ID！", msg_scramble: "打亂公式：\n",
-label_friends: "好友", label_requests: "申請"
+label_friends: "好友", label_requests: "申請", label_target_id: "對方ID", btn_confirm: "確認"
 },
 "zh-CN": {
 not_logged_in: "未登录", friend_list: "好友列表 / 申请", history: "历史成绩",
@@ -199,7 +208,7 @@ label_lang: "语言", label_start_method: "开始方法", opt_kb: "快捷键 (�
 opt_tc: "觸控开始", label_inspection: "15秒观察", opt_off: "关闭",
 opt_on: "开启 (15s)", label_decimals: "小数点位数", del_confirm: "确定删除？",
 save_success: "保存成功", id_limit: "三周内只能修改两次 ID！", msg_scramble: "打乱公式：\n",
-label_friends: "好友", label_requests: "申请"
+label_friends: "好友", label_requests: "申请", label_target_id: "對方ID", btn_confirm: "确认"
 },
 "en": {
 not_logged_in: "Guest", friend_list: "Friends / Requests", history: "History",
@@ -210,7 +219,7 @@ label_lang: "Language", label_start_method: "Start Method", opt_kb: "Keyboard (S
 opt_tc: "Touch Start", label_inspection: "Inspection", opt_off: "OFF",
 opt_on: "ON (15s)", label_decimals: "Decimals", del_confirm: "Are you sure?",
 save_success: "Saved!", id_limit: "ID can only be changed twice every 3 weeks!", msg_scramble: "Scramble:\n",
-label_friends: "Friends", label_requests: "Requests"
+label_friends: "Friends", label_requests: "Requests", label_target_id: "Target ID", btn_confirm: "Confirm"
 },
 "ja": {
 not_logged_in: "未ログイン", friend_list: "フレンド / 申請", history: "履歴",
@@ -221,7 +230,7 @@ label_lang: "言語", label_start_method: "開始方法", opt_kb: "キーボー�
 opt_tc: "タッチ開始", label_inspection: "インスペクション", opt_off: "オフ",
 opt_on: "オン (15s)", label_decimals: "小数点以下", del_confirm: "削除しますか？",
 save_success: "保存しました", id_limit: "IDの変更は3週間に2回までです！", msg_scramble: "スクランブル：\n",
-label_friends: "フレンド", label_requests: "申請"
+label_friends: "フレンド", label_requests: "申請", label_target_id: "相手ID", btn_confirm: "確認"
 }
 };
 
@@ -292,7 +301,6 @@ e.target.classList.add('active');
 document.getElementById(paneId).classList.add('active');
 };
 
-// 側邊欄專用的分頁切換函數
 window.switchSideTab = (e, paneId) => {
 document.querySelectorAll('.side-tab-link, #friend-section .tab-pane').forEach(el => el.classList.remove('active'));
 e.target.classList.add('active');
@@ -377,7 +385,6 @@ insInterval = setInterval(() => { left--; display.innerText = left; if(left<=0) 
 onAuthStateChanged(auth, async user => {
 if(user) {
 currentUser = user;
-// 立即切換 UI 顯示
 document.getElementById('login-section').style.display = 'none';
 document.getElementById('profile-section').style.display = 'block';
 document.getElementById('display-name-sidebar').innerText = user.displayName || "User";
@@ -386,7 +393,6 @@ document.getElementById('display-id-sidebar').innerText = "#Loading...";
 const userRef = doc(db, "users", user.uid);
 const snap = await getDoc(userRef);
 
-// 如果是新使用者，先建立基本文件
 if(!snap.exists()){
 const initialData = {
 displayName: user.displayName || "Cuber",
@@ -397,7 +403,6 @@ idUpdates: []
 await setDoc(userRef, initialData);
 }
 
-// 監聽即時更新
 onSnapshot(userRef, s => {
 if(s.exists()){
 const d = s.data();
