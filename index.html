@@ -2,213 +2,165 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>WeiFeng Timer - Professional Edition</title>
+    <title>WeiFeng Timer - WCA Full Edition</title>
     <style>
         :root { 
-            --bg: #1e1e1e; --panel: #252525; --text: #ffffff; --accent: #b8a2e7; 
-            --btn-bg: #2d2d2d; --ready: #ff4757; --go: #2ed573; --subtext: #aaaaaa;
+            --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #b8a2e7; 
+            --btn-bg: #2d2d2d; --ready: #ff4757; --go: #2ed573; --subtext: #888;
         }
 
-        /* 根據圖片設計的統一按鍵樣式 */
+        /* 嚴格遵循圖片設計的齒輪感按鍵 */
         .wf-btn {
             width: 45px; height: 45px;
             background: var(--btn-bg);
             border: none; border-radius: 12px;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: transform 0.1s, background 0.2s;
-            color: var(--accent);
-            font-size: 20px;
-            padding: 0;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            transition: 0.2s; color: var(--accent); font-size: 20px;
         }
-        .wf-btn:hover { background: #353535; }
-        .wf-btn:active { transform: scale(0.95); }
-        .wf-btn i { font-style: normal; }
+        .wf-btn:active { transform: scale(0.9); box-shadow: 0 2px 4px rgba(0,0,0,0.6); }
 
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
 
         /* 左側導航 */
-        #social-bar { width: 320px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; transition: 0.3s; z-index: 1000; }
-        #social-bar.collapsed { transform: translateX(-320px); position: absolute; height: 100%; }
-        .nav-header { padding: 15px; display: flex; gap: 12px; align-items: center; }
+        #social-bar { width: 300px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; transition: 0.3s; z-index: 1000; }
+        #social-bar.collapsed { transform: translateX(-300px); position: absolute; height: 100%; }
+        
+        /* 打亂顯示區 */
+        #scramble { padding: 25px; font-size: 1.1rem; min-height: 80px; color: var(--subtext); line-height: 1.5; text-align: center; }
+        #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; }
+        #timer-display { font-size: 14vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; text-align: center; }
 
-        /* 主畫面 */
-        #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; text-align: center; }
-        #scramble { padding: 30px; font-size: 1.1rem; min-height: 80px; color: var(--subtext); line-height: 1.6; word-spacing: 5px; }
-        #timer-display { font-size: 12vw; font-weight: 700; margin: auto; font-variant-numeric: tabular-nums; }
+        /* 成績列表 */
+        #history-panel { width: 250px; background: #181818; padding: 15px; border-left: 1px solid #333; overflow-y: auto; }
+        .solve-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333; font-size: 0.9rem; }
         
-        /* 好友區塊 */
-        .friend-input-group { padding: 10px 15px; display: flex; gap: 5px; }
-        .friend-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .friend-card { background: #333; margin-bottom: 8px; padding: 10px; border-radius: 8px; font-size: 0.9rem; }
-        .request-card { border-left: 4px solid var(--accent); background: #3a3a3a; margin-bottom: 8px; padding: 10px; border-radius: 4px; }
-        
-        /* 彈窗與基礎元件 */
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 20px; z-index: 3000; display: none; width: 400px; border: 1px solid #444; }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 20px; z-index: 3000; display: none; width: 380px; }
         .modal.active { display: block; }
-        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2500; display:none; }
+        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2500; display:none; }
         .overlay.active { display:block; }
-        
-        input, select { background: #333; border: 1px solid #444; color: white; padding: 8px 12px; border-radius: 6px; }
-        .msg-box { font-size: 0.75rem; color: #888; margin-top: 4px; }
     </style>
 </head>
 <body>
 
-<div class="overlay" id="modal-overlay" onclick="closeAllModals()"></div>
+<div class="overlay" id="overlay" onclick="closeModals()"></div>
 
 <div id="social-bar">
-    <div class="nav-header">
-        <button class="wf-btn" id="hide-sidebar-btn"><i>☰</i></button>
+    <div style="padding: 15px; display: flex; gap: 10px; align-items: center;">
+        <button class="wf-btn" id="btn-hide"><i>☰</i></button>
         <button class="wf-btn" onclick="openModal('modal-settings')"><i>⚙️</i></button>
-        <div style="margin-left: auto; text-align: right;">
-            <div id="display-name-sidebar" style="font-weight:bold; font-size:0.9rem;">未登入</div>
-            <div id="display-id-sidebar" style="font-size:0.7rem; color:var(--accent);">#Guest</div>
-        </div>
     </div>
-
-    <div class="friend-input-group">
-        <input type="text" id="target-id-input" placeholder="輸入好友 ID..." style="flex:1;">
-        <button class="wf-btn" onclick="sendFriendRequest()" style="width:38px; height:38px; border-radius:8px;"><i>+</i></button>
+    <div style="padding: 15px;">
+        <input type="text" id="search-friend" placeholder="輸入 ID 搜尋好友..." style="width:100%; padding:8px; background:#333; border:none; color:#fff; border-radius:8px;">
+        <button class="wf-btn" style="width:100%; height:35px; margin-top:8px; font-size:14px;" onclick="addFriend()">發送好友申請</button>
     </div>
-    
-    <div class="friend-list">
-        <div id="request-section"></div>
-        <hr style="border:0; border-top:1px solid #444; margin:10px 0;">
-        <div id="friend-section"></div>
-    </div>
+    <div id="request-list" style="padding: 15px;"></div>
+    <div id="friend-list" style="padding: 15px; flex:1; overflow-y:auto;"></div>
 </div>
 
 <div id="main-stage">
-    <button class="wf-btn" id="show-sidebar-btn" style="position:absolute; left:15px; top:15px; display:none;"><i>☰</i></button>
-    <div id="top-area">
-        <select id="event-selector" style="margin-top:20px;">
+    <button class="wf-btn" id="btn-show" style="position:absolute; left:15px; top:15px; display:none;"><i>☰</i></button>
+    <div id="top-area" style="padding:20px; text-align:center;">
+        <select id="event-selector" onchange="changeEvent(this.value)" style="padding:8px; border-radius:8px; background:var(--accent); color:#000; font-weight:bold;">
             <option value="333">3x3x3</option>
             <option value="222">2x2x2</option>
             <option value="444">4x4x4</option>
+            <option value="555">5x5x5</option>
+            <option value="666">6x6x6</option>
+            <option value="777">7x7x7</option>
+            <option value="pyram">Pyraminx</option>
             <option value="minx">Megaminx</option>
+            <option value="skewb">Skewb</option>
+            <option value="sq1">Square-1</option>
         </select>
-        <div id="scramble">正在生成打亂...</div>
+        <div id="scramble">載入打亂中...</div>
     </div>
     <div id="timer-display">0.000</div>
-    <div id="stats-bar" style="margin-bottom:40px; display:flex; justify-content:center; gap:40px;">
-        <div>AO5: <b id="ao5-val">--</b></div>
-        <div>AO12: <b id="ao12-val">--</b></div>
-    </div>
 </div>
 
-<div class="modal" id="modal-settings">
-    <h3 id="lang-set-title">設定 Settings</h3>
-    <label id="lang-theme-label">主題 Theme</label>
-    <select id="theme-select" onchange="changeTheme(this.value)" style="width:100%; margin-bottom:15px;">
-        <option value="dark">深色專業</option>
-        <option value="light">明亮模式</option>
-    </select>
-
-    <label id="lang-select-label">語言 Language</label>
-    <select id="lang-select" onchange="changeLang(this.value)" style="width:100%; margin-bottom:15px;">
-        <option value="zh">繁體中文</option>
-        <option value="en">English</option>
-        <option value="jp">日本語</option>
-        <option value="kr">한국어</option>
-    </select>
-
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span id="lang-show-scramble">顯示打亂公式</span>
-        <input type="checkbox" id="show-scramble-check" checked onchange="toggleScrambleDisplay()">
-    </div>
-    <br>
-    <button class="wf-btn" style="width:100%; height:40px; border-radius:8px; font-size:1rem;" id="login-btn">Google Login</button>
+<div id="history-panel">
+    <div style="font-weight:bold; margin-bottom:15px;">歷史成績</div>
+    <div id="solve-list-ui"></div>
 </div>
 
 <script type="module">
-    // --- 核心變數 ---
-    let currentEvent = "333";
-    let timerState = "IDLE";
-    let languages = {
-        zh: { set: "設定", theme: "主題", lang: "語言", showS: "顯示打亂公式" },
-        en: { set: "Settings", theme: "Theme", lang: "Language", showS: "Show Scramble" },
-        jp: { set: "設定", theme: "テーマ", lang: "言語", showS: "スクランブル表示" },
-        kr: { set: "설정", theme: "테마", lang: "언어", showS: "스크램블 표시" }
+    // --- WCA Scramble 邏輯庫 ---
+    const scramblers = {
+        "333": () => g(["U","D","L","R","F","B"], 20),
+        "222": () => g(["U","R","F"], 9),
+        "444": () => g(["U","D","L","R","F","B","Uw","Rw","Fw"], 40),
+        "555": () => g(["U","D","L","R","F","B","Uw","Dw","Lw","Rw","Fw","Bw"], 60),
+        "666": () => g(["U","D","L","R","F","B","2U","2D","2L","2R","2F","2B"], 80),
+        "777": () => g(["U","D","L","R","F","B","2U","2D","2L","2R","2F","2B","3U","3D","3L","3R","3F","3B"], 100),
+        "pyram": () => {
+            let s = g(["U","L","R","B"], 10);
+            ["u","l","r","b"].forEach(t => { if(Math.random()>0.5) s += ` ${t}${Math.random()>0.5?"'":""}`; });
+            return s;
+        },
+        "minx": () => {
+            let s = "";
+            for(let i=0; i<7; i++){
+                for(let j=0; j<10; j++) s += (j%2===0?"R":"D") + (Math.random()>0.5?"++":"--") + " ";
+                s += "U" + (Math.random()>0.5?"'":"") + "<br>";
+            }
+            return s;
+        },
+        "skewb": () => g(["U","L","R","B"], 10),
+        "sq1": () => {
+            let s = "";
+            for(let i=0; i<10; i++) s += `(${Math.floor(Math.random()*12-6)},${Math.floor(Math.random()*12-6)}) / `;
+            return s;
+        }
     };
 
-    // --- 五魔方(Megaminx)打亂修復 ---
-    function genMegaminx() {
-        const moves = ["R", "D"];
-        const suffixes = ["++", "--"];
-        let scramble = "";
-        for (let i = 0; i < 7; i++) {
-            for (let j = 0; j < 10; j++) {
-                scramble += moves[j % 2] + suffixes[Math.floor(Math.random() * 2)] + " ";
-            }
-            scramble += "U" + (Math.random() > 0.5 ? "'" : "") + "<br>";
-        }
-        return scramble;
+    function g(m, l) {
+        let r = [], last = "";
+        for(let i=0; i<l; i++){
+            let c = m[Math.floor(Math.random()*m.length)];
+            while(c === last) c = m[Math.floor(Math.random()*m.length)];
+            r.push(c + ["","'","2"][Math.floor(Math.random()*3)]); last = c;
+        } return r.join(" ");
     }
 
-    function generateScramble() {
-        const scrambleEl = document.getElementById('scramble');
-        const isShow = document.getElementById('show-scramble-check').checked;
-        
-        if (!isShow) {
-            scrambleEl.innerHTML = "---";
-            return;
-        }
+    // --- 全局狀態與 Firebase 成績找回 ---
+    let currentEvent = "333";
+    let allData = JSON.parse(localStorage.getItem('wf_solves')) || {}; // 優先從本地找回防止遺失
 
-        if (currentEvent === "minx") {
-            scrambleEl.innerHTML = genMegaminx();
-        } else {
-            // 基礎打亂邏輯 (簡化版)
-            scrambleEl.innerHTML = "R' U L B2 D F' R2 U' L' B D2 L' F2 ..."; 
-        }
-    }
-
-    // --- 功能開關 ---
-    window.toggleScrambleDisplay = () => {
+    window.changeEvent = (val) => {
+        currentEvent = val;
+        renderSolves();
         generateScramble();
     };
 
-    window.changeLang = (v) => {
-        const l = languages[v];
-        document.getElementById('lang-set-title').innerText = l.set;
-        document.getElementById('lang-theme-label').innerText = l.theme;
-        document.getElementById('lang-select-label').innerText = l.lang;
-        document.getElementById('lang-show-scramble').innerText = l.showS;
-    };
+    function generateScramble() {
+        const isShow = document.getElementById('scramble-switch')?.checked ?? true;
+        document.getElementById('scramble').innerHTML = isShow ? (scramblers[currentEvent]() || "---") : "---";
+    }
 
-    // --- 好友系統 (模擬邏輯) ---
-    window.sendFriendRequest = () => {
-        const id = document.getElementById('target-id-input').value;
-        if(id === "999") { // 假設 999 不存在
-            alert("ID 輸入錯誤，找不到該帳號");
-        } else {
-            alert("已對 #" + id + " 送出好友邀請");
-        }
-    };
-
-    // --- 側邊欄切換 ---
-    document.getElementById('hide-sidebar-btn').onclick = () => {
-        document.getElementById('social-bar').classList.add('collapsed');
-        document.getElementById('show-sidebar-btn').style.display = 'flex';
-    };
-    document.getElementById('show-sidebar-btn').onclick = () => {
-        document.getElementById('social-bar').classList.remove('collapsed');
-        document.getElementById('show-sidebar-btn').style.display = 'none';
-    };
-
-    // --- 彈窗處理 ---
-    window.openModal = (id) => {
-        document.getElementById('modal-overlay').classList.add('active');
-        document.getElementById(id).classList.add('active');
-    };
-    window.closeAllModals = () => {
-        document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
-    };
+    function renderSolves() {
+        const solves = allData[currentEvent] || [];
+        document.getElementById('solve-list-ui').innerHTML = solves.map(s => `
+            <div class="solve-item">
+                <b>${s.time.toFixed(3)}</b>
+                <span style="color:#666; font-size:10px;">${new Date(s.id).toLocaleTimeString()}</span>
+            </div>
+        `).join('');
+        localStorage.setItem('wf_solves', JSON.stringify(allData)); // 儲存備份
+    }
 
     // 初始化
     generateScramble();
-</script>
+    renderSolves();
 
+    // 介面按鈕邏輯
+    document.getElementById('btn-hide').onclick = () => {
+        document.getElementById('social-bar').classList.add('collapsed');
+        document.getElementById('btn-show').style.display = 'flex';
+    };
+    document.getElementById('btn-show').onclick = () => {
+        document.getElementById('social-bar').classList.remove('collapsed');
+        document.getElementById('btn-show').style.display = 'none';
+    };
+</script>
 </body>
 </html>
