@@ -121,9 +121,6 @@
             <option value="gold">尊爵金</option>
         </select>
         <label>語言</label><select><option>繁體中文</option></select>
-        <div style="display:flex; justify-content:space-between; margin-top:10px;">
-            顯示打亂公式 <input type="checkbox" id="show-scramble-check" checked style="width:20px;">
-        </div>
     </div>
 
     <div id="tab-timer" class="tab-pane">
@@ -158,7 +155,6 @@
     let currentUser = null, allData = {}, currentEvent = "333", currentScramble = "";
     let timerState = "IDLE", startTime, timerInterval, holdTimeout, insInterval;
 
-    // --- 打亂生成器 ---
     const scramblers = {
         "333": () => genMoves(["U","D","L","R","F","B"], 20),
         "222": () => genMoves(["U","R","F"], 9),
@@ -170,7 +166,7 @@
         },
         "minx": () => {
             let res = [];
-            for(let i=0; i<7; i++) { // 7行
+            for(let i=0; i<7; i++) {
                 let line = [];
                 for(let j=0; j<10; j++) {
                     let move = (j % 2 === 0) ? "R" : "D";
@@ -195,10 +191,9 @@
 
     function generateScramble() {
         currentScramble = (scramblers[currentEvent] || scramblers["333"])();
-        document.getElementById('scramble').innerHTML = document.getElementById('show-scramble-check').checked ? currentScramble : "---";
+        document.getElementById('scramble').innerHTML = currentScramble;
     }
 
-    // --- 設定分頁切換 ---
     window.switchTab = (e, paneId) => {
         document.querySelectorAll('.tab-link, .tab-pane').forEach(el => el.classList.remove('active'));
         e.target.classList.add('active');
@@ -207,7 +202,6 @@
     window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
     window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
 
-    // --- 成績渲染與統計 ---
     function renderSolves() {
         const solves = allData[currentEvent] || [];
         const dec = document.getElementById('decimal-select').value;
@@ -236,7 +230,6 @@
         }
     };
 
-    // --- 計時核心 ---
     const display = document.getElementById('timer-display');
     function stopTimer() {
         clearInterval(timerInterval); timerState = "IDLE";
@@ -280,7 +273,6 @@
         }
     };
 
-    // --- 帳號監聽 ---
     onAuthStateChanged(auth, async user => {
         if(user) {
             currentUser = user;
