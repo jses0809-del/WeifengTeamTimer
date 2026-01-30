@@ -16,7 +16,7 @@ body.gold-theme { --bg: #1a1a1a; --panel: #2c2c2c; --text: #d4af37; --accent: #f
 
 body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; user-select: none; }
 
-#social-bar { width: 300px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; transition: 0.3s; z-index: 1000; }
+#social-bar { width: 300px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; transition: 0.3s; z-index: 1000; position: relative; }
 #social-bar.collapsed { transform: translateX(-300px); position: absolute; height: 100%; }
 .nav-header { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.1); }
 .icon-btn { font-size: 20px; cursor: pointer; background: #333; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
@@ -43,27 +43,25 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
 input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 6px; margin: 8px 0; box-sizing: border-box; }
 .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
 
-/* 側邊欄專用分頁樣式 */
 .side-tab-nav { display: flex; border-bottom: 1px solid #333; margin-bottom: 10px; }
 .side-tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.85rem; transition: 0.2s; }
 .side-tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
 
-/* 申請分頁與好友列表 */
 .request-input-group { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
 .small-label { font-size: 0.75rem; color: var(--subtext); margin-bottom: 4px; display: block; }
 .req-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; }
 .req-btns { display: flex; gap: 5px; }
 .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; border: none; color: white; }
 
-/* 聊天介面樣式 */
-#chat-modal { width: 450px; height: 500px; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
-#chat-header { padding: 15px; background: rgba(0,0,0,0.2); font-weight: bold; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
-#chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-.msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-break: break-word; }
-.msg.mine { align-self: flex-end; background: var(--accent); color: white; }
-.msg.theirs { align-self: flex-start; background: #333; color: white; }
-#chat-input-area { padding: 10px; display: flex; gap: 10px; border-top: 1px solid #333; }
-#chat-input { flex: 1; margin: 0; }
+/* 側邊欄內部的聊天介面樣式 */
+#sidebar-chat-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel); display: none; flex-direction: column; z-index: 10; }
+#sidebar-chat-view.active { display: flex; }
+#chat-back-btn { padding: 15px; cursor: pointer; background: rgba(0,0,0,0.2); border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
+#chat-msgs-container { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.side-msg { max-width: 85%; padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; line-height: 1.3; }
+.side-msg.mine { align-self: flex-end; background: var(--accent); color: #fff; }
+.side-msg.theirs { align-self: flex-start; background: #333; color: #fff; }
+.chat-input-row { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #333; }
 </style>
 </head>
 <body class="dark-theme">
@@ -71,33 +69,46 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 <div class="overlay" id="modal-overlay" onclick="closeAllModals()"></div>
 
 <div id="social-bar">
-<div class="nav-header">
-<button class="icon-btn" id="hide-sidebar-btn">☰</button>
-<button class="icon-btn" onclick="openModal('modal-settings')">⚙️</button>
-</div>
-<div id="user-info-card" style="padding: 15px; border-bottom: 1px solid #333;">
-<div id="display-name-sidebar" data-i18n="not_logged_in">未登入</div>
-<div id="display-id-sidebar" style="font-size:0.8rem; color:var(--accent);">#Guest</div>
-</div>
-<div style="flex:1; overflow-y:auto; display: flex; flex-direction: column;">
-<div class="side-tab-nav">
-<button class="side-tab-link active" onclick="switchSideTab(event, 'tab-friends')" data-i18n="label_friends">好友</button>
-<button class="side-tab-link" onclick="switchSideTab(event, 'tab-requests')" data-i18n="label_requests">申請</button>
-</div>
-<div id="friend-section" style="padding: 10px; flex: 1;">
-<div id="tab-friends" class="tab-pane active">
-<div id="friends-list-ui" style="color: var(--subtext); font-size: 0.9rem;">尚無好友</div>
-</div>
-<div id="tab-requests" class="tab-pane">
-<div class="request-input-group">
-<span class="small-label" data-i18n="label_target_id">對方ID</span>
-<input type="text" id="target-friend-id" placeholder="Ex: 123456">
-<button class="btn" style="padding: 8px; margin-top: 5px;" id="send-request-btn" data-i18n="btn_confirm">確認</button>
-</div>
-<div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">載入中...</div>
-</div>
-</div>
-</div>
+    <div id="sidebar-friends-view" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="nav-header">
+            <button class="icon-btn" id="hide-sidebar-btn">☰</button>
+            <button class="icon-btn" onclick="openModal('modal-settings')">⚙️</button>
+        </div>
+        <div id="user-info-card" style="padding: 15px; border-bottom: 1px solid #333;">
+            <div id="display-name-sidebar" data-i18n="not_logged_in">未登入</div>
+            <div id="display-id-sidebar" style="font-size:0.8rem; color:var(--accent);">#Guest</div>
+        </div>
+        <div style="flex:1; overflow-y:auto; display: flex; flex-direction: column;">
+            <div class="side-tab-nav">
+                <button class="side-tab-link active" onclick="switchSideTab(event, 'tab-friends')" data-i18n="label_friends">好友</button>
+                <button class="side-tab-link" onclick="switchSideTab(event, 'tab-requests')" data-i18n="label_requests">申請</button>
+            </div>
+            <div id="friend-section" style="padding: 10px; flex: 1;">
+                <div id="tab-friends" class="tab-pane active">
+                    <div id="friends-list-ui" style="color: var(--subtext); font-size: 0.9rem;">尚無好友</div>
+                </div>
+                <div id="tab-requests" class="tab-pane">
+                    <div class="request-input-group">
+                        <span class="small-label" data-i18n="label_target_id">對方ID</span>
+                        <input type="text" id="target-friend-id" placeholder="Ex: 123456">
+                        <button class="btn" style="padding: 8px; margin-top: 5px;" id="send-request-btn" data-i18n="btn_confirm">確認</button>
+                    </div>
+                    <div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">載入中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar-chat-view">
+        <div id="chat-back-btn" onclick="closeSidebarChat()">
+            <span>⬅</span> <span id="chat-title-name">Chat</span>
+        </div>
+        <div id="chat-msgs-container"></div>
+        <div class="chat-input-row">
+            <input type="text" id="side-chat-input" placeholder="Aa" style="margin:0;">
+            <button class="mini-btn" id="side-chat-send" style="background:var(--accent); width:50px;">➤</button>
+        </div>
+    </div>
 </div>
 
 <div id="main-stage">
@@ -177,18 +188,6 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 <option value="2">2 位</option>
 <option value="3" selected>3 位</option>
 </select>
-</div>
-</div>
-
-<div class="modal" id="chat-modal">
-<div id="chat-header">
-<span id="chat-target-name">Chat</span>
-<span style="cursor:pointer" onclick="closeAllModals()">✕</span>
-</div>
-<div id="chat-messages"></div>
-<div id="chat-input-area">
-<input type="text" id="chat-input" placeholder="Type a message...">
-<button class="btn" style="width:60px; margin:0;" id="send-msg-btn">➤</button>
 </div>
 </div>
 
@@ -336,14 +335,8 @@ e.target.classList.add('active');
 document.getElementById(paneId).classList.add('active');
 };
 
-window.openModal = (id) => { 
-document.getElementById('modal-overlay').classList.add('active'); 
-document.getElementById(id).classList.add('active'); 
-};
-window.closeAllModals = () => {
-document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
-if(unsubscribeChat) unsubscribeChat();
-};
+window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
+window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
 
 function renderSolves() {
 const solves = allData[currentEvent] || [];
@@ -416,9 +409,9 @@ insInterval = setInterval(() => { left--; display.innerText = left; if(left<=0) 
 }
 };
 
-// --- 好友與聊天系統核心 ---
-let currentChatFriendId = null;
-let unsubscribeChat = null;
+// --- 好友與即時聊天系統 ---
+let chatUnsubscribe = null;
+let currentChatUid = null;
 
 async function renderRequests(incoming) {
 const ui = document.getElementById('requests-list-ui');
@@ -447,7 +440,7 @@ const snap = await getDoc(doc(db, "users", uid));
 const d = snap.data();
 const div = document.createElement('div');
 div.className = "req-item";
-div.onclick = () => openChat(uid, d.displayName);
+div.onclick = () => openSidebarChat(uid, d.displayName);
 div.innerHTML = `<span>${d.displayName} (#${d.customID})</span>`;
 ui.appendChild(div);
 }
@@ -477,45 +470,52 @@ alert(i18n[currentLang].msg_req_sent);
 document.getElementById('target-friend-id').value = "";
 };
 
-// --- 聊天邏輯 ---
-async function openChat(friendId, friendName) {
-currentChatFriendId = friendId;
-document.getElementById('chat-target-name').innerText = friendName;
-document.getElementById('chat-messages').innerHTML = "";
-openModal('chat-modal');
+// --- 側邊欄聊天切換 ---
+async function openSidebarChat(uid, name) {
+currentChatUid = uid;
+document.getElementById('chat-title-name').innerText = name;
+document.getElementById('sidebar-friends-view').style.display = 'none';
+document.getElementById('sidebar-chat-view').classList.add('active');
 
-const chatId = [currentUser.uid, friendId].sort().join("_");
+const chatId = [currentUser.uid, uid].sort().join("_");
 const chatRef = collection(db, "chats", chatId, "messages");
 const q = query(chatRef, orderBy("timestamp", "asc"));
 
-if(unsubscribeChat) unsubscribeChat();
-unsubscribeChat = onSnapshot(q, (snapshot) => {
-const msgContainer = document.getElementById('chat-messages');
-msgContainer.innerHTML = "";
-snapshot.forEach((doc) => {
-const data = doc.data();
-const msgDiv = document.createElement('div');
-msgDiv.className = `msg ${data.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
-msgDiv.innerText = data.text;
-msgContainer.appendChild(msgDiv);
-});
-msgContainer.scrollTop = msgContainer.scrollHeight;
+if(chatUnsubscribe) chatUnsubscribe();
+chatUnsubscribe = onSnapshot(q, (snapshot) => {
+    const container = document.getElementById('chat-msgs-container');
+    container.innerHTML = "";
+    snapshot.forEach(d => {
+        const msg = d.data();
+        const div = document.createElement('div');
+        div.className = `side-msg ${msg.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
+        div.innerText = msg.text;
+        container.appendChild(div);
+    });
+    container.scrollTop = container.scrollHeight;
 });
 }
 
-document.getElementById('send-msg-btn').onclick = sendMessage;
-document.getElementById('chat-input').onkeydown = (e) => { if(e.key === 'Enter') sendMessage(); };
+window.closeSidebarChat = () => {
+if(chatUnsubscribe) chatUnsubscribe();
+currentChatUid = null;
+document.getElementById('sidebar-chat-view').classList.remove('active');
+document.getElementById('sidebar-friends-view').style.display = 'flex';
+};
 
-async function sendMessage() {
-const input = document.getElementById('chat-input');
+document.getElementById('side-chat-send').onclick = sendChatMessage;
+document.getElementById('side-chat-input').onkeydown = (e) => { if(e.key==='Enter') sendChatMessage(); };
+
+async function sendChatMessage() {
+const input = document.getElementById('side-chat-input');
 const text = input.value.trim();
-if(!text || !currentChatFriendId) return;
+if(!text || !currentChatUid) return;
 
-const chatId = [currentUser.uid, currentChatFriendId].sort().join("_");
+const chatId = [currentUser.uid, currentChatUid].sort().join("_");
 await addDoc(collection(db, "chats", chatId, "messages"), {
-senderId: currentUser.uid,
-text: text,
-timestamp: serverTimestamp()
+    senderId: currentUser.uid,
+    text: text,
+    timestamp: serverTimestamp()
 });
 input.value = "";
 }
