@@ -3,40 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeiFeng Timer - 雲端版</title>
+    <title>WeiFeng Timer - 專業魔方計時器</title>
     <style>
-        :root { --bg: #121212; --text: #eee; --ready: #ff4757; --go: #2ed573; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; margin: 0; }
-        #scramble { padding: 20px; font-size: 1.2rem; color: #888; text-align: center; min-height: 60px; }
-        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; }
-        #stats-bar { width: 100%; display: flex; justify-content: space-around; padding: 20px; background: #1a1a1a; }
-        .btn-group { margin-top: 10px; }
-        button { cursor: pointer; padding: 5px 10px; background: #333; color: white; border: none; border-radius: 4px; }
-        .history-item { border-bottom: 1px solid #333; padding: 5px; display: flex; justify-content: space-between; width: 250px; }
-        .dnf { color: #ff4757; text-decoration: line-through; }
+        :root {
+            --bg: #121212;
+            --panel: #1e1e1e;
+            --text: #ffffff;
+            --accent: #3742fa;
+            --ready: #ff4757;
+            --go: #2ed573;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 頂部控制列 */
+        #header {
+            width: 100%;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--panel);
+            box-sizing: border-box;
+        }
+
+        select {
+            background: #333;
+            color: white;
+            border: 1px solid #444;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        #login-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* 打亂公式 */
+        #scramble {
+            padding: 30px;
+            font-size: 1.5rem;
+            color: #aaa;
+            text-align: center;
+            max-width: 80%;
+            min-height: 80px;
+        }
+
+        /* 計時器主體 */
+        #timer-display {
+            font-size: 15vw;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+            margin: auto;
+            transition: color 0.1s, text-shadow 0.1s;
+        }
+
+        /* 統計側欄 */
+        #sidebar {
+            position: fixed;
+            right: 20px;
+            top: 100px;
+            width: 260px;
+            background: var(--panel);
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stats-summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        #solve-list {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .solve-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a2a2a;
+            font-size: 0.9rem;
+        }
+
+        .solve-time { width: 80px; }
+        .dnf-text { color: var(--ready); text-decoration: line-through; }
+        
+        .btn-group button {
+            background: #333;
+            border: none;
+            color: #ccc;
+            margin-left: 3px;
+            padding: 3px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        .btn-group button:hover { background: #444; color: white; }
     </style>
 </head>
 <body>
 
-<div id="scramble">正在生成打亂公式...</div>
+<div id="header">
+    <select id="event-select">
+        <option value="333">3x3x3</option>
+        <option value="222">2x2x2</option>
+        <option value="444">4x4x4</option>
+        <option value="555">5x5x5</option>
+        <option value="pyram">Pyraminx</option>
+        <option value="minx">Megaminx</option>
+    </select>
+    <div id="user-info">
+        <button id="login-btn">Google 登入</button>
+    </div>
+</div>
+
+<div id="scramble">載入中...</div>
 
 <div id="timer-display">0.000</div>
 
-<div id="stats-bar">
-    <div>AO5: <span id="ao5">--</span></div>
-    <div>AO12: <span id="ao12">--</span></div>
-    <button id="login-btn">Google 登入</button>
-</div>
-
-<div id="history-panel">
-    <h3>歷史成績 (點擊成績可編輯)</h3>
+<div id="sidebar">
+    <div class="stats-summary">
+        <span>AO5: <span id="ao5">--</span></span>
+        <span>AO12: <span id="ao12">--</span></span>
+    </div>
     <div id="solve-list"></div>
 </div>
 
 <script type="module">
-    // --- Firebase 初始化 ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -54,46 +177,38 @@
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-    // --- 全域變數 ---
-    let solves = []; // 儲存格式: {time: 10.521, isPlusTwo: false, isDNF: false, id: Date.now()}
+    let solves = []; 
     let timerState = "IDLE";
     let startTime, timerInterval, holdTimeout, currentUser = null;
 
-    // --- 核心功能：統計優化 ---
-    function calculateAverage(n) {
-        if (solves.length < n) return "--";
-        // 取得最近 n 筆，並將 DNF 視為無限大
-        let recent = solves.slice(0, n).map(s => s.isDNF ? Infinity : (s.isPlusTwo ? s.time + 2 : s.time));
-        
-        recent.sort((a, b) => a - b);
-        recent.pop();   // 剔除最慢
-        recent.shift(); // 剔除最快
+    const display = document.getElementById('timer-display');
+    const scrambleEl = document.getElementById('scramble');
+    const eventSelect = document.getElementById('event-select');
 
-        if (recent.includes(Infinity)) return "DNF";
-        const sum = recent.reduce((a, b) => a + b, 0);
-        return (sum / (n - 2)).toFixed(3);
+    // --- 1. 打亂生成器 ---
+    function generateScramble() {
+        const event = eventSelect.value;
+        const moves = ["U", "D", "L", "R", "F", "B"];
+        const mods = ["", "'", "2"];
+        let length = 20;
+        if(event === "222") length = 9;
+        if(event === "444") length = 40;
+
+        let s = [], last = "";
+        for(let i=0; i<length; i++) {
+            let m = moves[Math.floor(Math.random()*moves.length)];
+            while(m === last) m = moves[Math.floor(Math.random()*moves.length)];
+            s.push(m + mods[Math.floor(Math.random()*3)]);
+            last = m;
+        }
+        scrambleEl.innerText = s.join(" ");
     }
 
-    // --- 核心功能：成績操作 ---
-    window.modifySolve = async (id, type) => {
-        const index = solves.findIndex(s => s.id === id);
-        if (index === -1) return;
-
-        if (type === 'plusTwo') solves[index].isPlusTwo = !solves[index].isPlusTwo;
-        else if (type === 'DNF') solves[index].isDNF = !solves[index].isDNF;
-        else if (type === 'delete') {
-            if(confirm("確定刪除這筆成績？")) solves.splice(index, 1);
-        }
-
-        updateUI();
-        syncToCloud();
-    };
-
-    // --- 計時器邏輯 ---
-    const display = document.getElementById('timer-display');
-    
+    // --- 2. 計時邏輯 ---
     function handleKeyDown(e) {
         if (e.code !== 'Space') return;
+        e.preventDefault(); 
+
         if (timerState === "RUNNING") {
             stopTimer();
         } else if (timerState === "IDLE") {
@@ -102,6 +217,7 @@
             holdTimeout = setTimeout(() => {
                 timerState = "GO";
                 display.style.color = "var(--go)";
+                display.textShadow = "0 0 20px rgba(46, 213, 115, 0.5)";
                 display.innerText = "0.000";
             }, 500);
         }
@@ -133,15 +249,35 @@
         generateScramble();
     }
 
-    // --- UI 更新與雲端同步 ---
+    // --- 3. 統計與 UI ---
+    function calculateAverage(n) {
+        if (solves.length < n) return "--";
+        let recent = solves.slice(0, n).map(s => s.isDNF ? Infinity : (s.isPlusTwo ? s.time + 2 : s.time));
+        recent.sort((a, b) => a - b);
+        recent.pop();
+        recent.shift();
+        if (recent.includes(Infinity)) return "DNF";
+        return (recent.reduce((a, b) => a + b, 0) / (n - 2)).toFixed(3);
+    }
+
+    window.modifySolve = (id, type) => {
+        const i = solves.findIndex(s => s.id === id);
+        if (type === 'plusTwo') solves[i].isPlusTwo = !solves[i].isPlusTwo;
+        else if (type === 'DNF') solves[i].isDNF = !solves[i].isDNF;
+        else if (type === 'delete') solves.splice(i, 1);
+        updateUI();
+        syncToCloud();
+    };
+
     function updateUI() {
         document.getElementById('ao5').innerText = calculateAverage(5);
         document.getElementById('ao12').innerText = calculateAverage(12);
-        
         const list = document.getElementById('solve-list');
         list.innerHTML = solves.map(s => `
-            <div class="history-item">
-                <span class="${s.isDNF ? 'dnf' : ''}">${s.isDNF ? 'DNF' : (s.isPlusTwo ? (s.time+2).toFixed(3)+'+' : s.time.toFixed(3))}</span>
+            <div class="solve-item">
+                <span class="solve-time ${s.isDNF ? 'dnf-text' : ''}">
+                    ${s.isDNF ? 'DNF' : (s.isPlusTwo ? (s.time+2).toFixed(3)+'+' : s.time.toFixed(3))}
+                </span>
                 <div class="btn-group">
                     <button onclick="modifySolve(${s.id}, 'plusTwo')">+2</button>
                     <button onclick="modifySolve(${s.id}, 'DNF')">DNF</button>
@@ -151,16 +287,16 @@
         `).join('');
     }
 
+    // --- 4. 帳號功能 ---
     async function syncToCloud() {
-        if (!currentUser) return;
-        await setDoc(doc(db, "users", currentUser.uid), { solves });
+        if (currentUser) await setDoc(doc(db, "users", currentUser.uid), { solves });
     }
 
-    // --- 登入邏輯 ---
-    document.getElementById('login-btn').onclick = async () => {
+    document.getElementById('login-btn').onclick = async (e) => {
         const res = await signInWithPopup(auth, provider);
         currentUser = res.user;
-        document.getElementById('login-btn').innerText = currentUser.displayName;
+        e.target.innerText = currentUser.displayName;
+        e.target.blur();
         const data = await getDoc(doc(db, "users", currentUser.uid));
         if (data.exists()) {
             solves = data.data().solves || [];
@@ -168,17 +304,10 @@
         }
     };
 
-    // --- 簡單打亂生成 ---
-    function generateScramble() {
-        const moves = ["U", "D", "L", "R", "F", "B"];
-        const mods = ["", "'", "2"];
-        let s = [];
-        for(let i=0; i<20; i++) s.push(moves[Math.floor(Math.random()*6)] + mods[Math.floor(Math.random()*3)]);
-        document.getElementById('scramble').innerText = s.join(" ");
-    }
-
+    // 初始化
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    eventSelect.onchange = generateScramble;
     generateScramble();
 </script>
 </body>
