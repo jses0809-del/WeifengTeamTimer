@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>WeiFeng Timer - Multi-Event Pro</title>
+    <title>WeiFeng Timer - Detail & Delete</title>
     <style>
         :root { --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa; --ready: #ff4757; --go: #2ed573; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; user-select: none; }
@@ -11,35 +11,31 @@
         #social-bar { width: 320px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 1000; transition: transform 0.3s ease; }
         #social-bar.collapsed { transform: translateX(-320px); position: absolute; height: 100%; }
         .nav-header { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.3); align-items: center; }
-        .icon-btn { font-size: 20px; cursor: pointer; background: #333; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .icon-btn { font-size: 20px; cursor: pointer; background: #333; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
         .icon-btn:hover { background: var(--accent); }
 
-        /* 右側主區域 */
+        /* 主區域 */
         #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; }
         #top-info { padding: 20px; text-align: center; }
-        #scramble { font-size: 1.2rem; color: #aaa; margin-bottom: 10px; min-height: 60px; line-height: 1.4; max-width: 80%; margin-left: auto; margin-right: auto; }
-        
-        /* 項目選擇器 */
-        #event-selector { background: #3742fa; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        #scramble { font-size: 1.2rem; color: #aaa; margin-bottom: 10px; min-height: 60px; max-width: 80%; margin: 0 auto; line-height: 1.4; }
+        #event-selector { background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
         /* 計時器 */
-        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; transition: color 0.1s; }
+        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; }
 
-        /* 統計區 */
+        /* 統計與歷史 */
         #stats-bar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 40px; background: rgba(0,0,0,0.6); padding: 12px 35px; border-radius: 50px; }
-        .stat-item b { color: var(--accent); font-size: 1.3rem; }
-
-        /* 歷史成績 */
-        #history-panel { width: 220px; background: rgba(0,0,0,0.2); padding: 15px; overflow-y: auto; border-left: 1px solid #333; }
-        .solve-item { padding: 8px 0; border-bottom: 1px solid #333; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
-        .solve-item:hover { color: var(--accent); }
+        #history-panel { width: 250px; background: rgba(0,0,0,0.2); padding: 15px; overflow-y: auto; border-left: 1px solid #333; }
+        .solve-item { padding: 8px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-radius: 4px; }
+        .solve-item:hover { background: rgba(255,255,255,0.05); }
+        .del-btn { color: #ff4757; font-weight: bold; padding: 5px 8px; cursor: pointer; margin-left: 10px; }
+        .del-btn:hover { background: rgba(255,71,87,0.2); border-radius: 4px; }
 
         /* 彈窗 */
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 12px; z-index: 3000; display: none; width: 320px; box-shadow: 0 0 50px rgba(0,0,0,0.9); }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 12px; z-index: 3000; display: none; width: 350px; box-shadow: 0 0 50px rgba(0,0,0,0.9); }
         .modal.active { display: block; }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2500; display:none; }
         .overlay.active { display:block; }
-        input { width: 100%; padding: 12px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 6px; margin: 10px 0; box-sizing: border-box; }
         .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
@@ -50,69 +46,54 @@
 <div id="social-bar">
     <div class="nav-header">
         <button class="icon-btn" id="hide-sidebar-btn">☰</button>
-        <button class="icon-btn" id="open-add-modal">＋</button>
-        <button class="icon-btn" id="open-set-modal">⚙️</button>
+        <button class="icon-btn" onclick="openModal('modal-add')">＋</button>
+        <button class="icon-btn" onclick="openModal('modal-settings')">⚙️</button>
     </div>
-    <div style="padding: 15px; font-weight: bold; color: #888;">好友動態</div>
-    <div id="friend-list-ui" style="flex:1; overflow-y:auto; padding:10px;"></div>
+    <div id="friend-list-ui" style="flex:1; padding:10px;"></div>
 </div>
 
 <div id="main-stage">
     <button class="icon-btn" id="show-sidebar-btn" style="position:absolute; left:15px; top:15px; display:none;">☰</button>
-    
     <div id="top-info">
         <select id="event-selector">
-            <optgroup label="立方體">
-                <option value="222">2x2x2</option>
-                <option value="333" selected>3x3x3</option>
-                <option value="444">4x4x4</option>
-                <option value="555">5x5x5</option>
-                <option value="666">6x6x6</option>
-                <option value="777">7x7x7</option>
-            </optgroup>
-            <optgroup label="異形">
-                <option value="pyram">金字塔 (Pyraminx)</option>
-                <option value="minx">五魔方 (Megaminx)</option>
-                <option value="skewb">斜轉 (Skewb)</option>
-            </optgroup>
+            <option value="222">2x2</option><option value="333" selected>3x3</option>
+            <option value="444">4x4</option><option value="555">5x5</option>
+            <option value="666">6x6</option><option value="777">7x7</option>
+            <option value="pyram">金字塔</option><option value="minx">五魔方</option>
+            <option value="skewb">斜轉</option>
         </select>
-        <div id="scramble">載入打亂中...</div>
+        <div id="scramble">打亂生成中...</div>
     </div>
-
     <div id="timer-display">0.000</div>
-
     <div id="stats-bar">
-        <div class="stat-item">AO5: <b id="ao5-val">--</b></div>
-        <div class="stat-item">AO12: <b id="ao12-val">--</b></div>
+        <div>AO5: <b id="ao5-val">--</b></div>
+        <div>AO12: <b id="ao12-val">--</b></div>
     </div>
 </div>
 
 <div id="history-panel">
-    <div style="font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between;">
-        <span id="history-label">333 成績</span>
-    </div>
+    <div style="font-weight:bold; margin-bottom:10px;">成績列表</div>
     <div id="solve-list-ui"></div>
+</div>
+
+<div class="modal" id="modal-detail">
+    <h3>🔍 成績詳細資料</h3>
+    <div id="detail-content" style="font-size: 0.9rem; line-height: 1.6;"></div>
+    <button class="btn" onclick="closeAllModals()">關閉</button>
 </div>
 
 <div class="modal" id="modal-settings">
     <h3>⚙️ 帳號設定</h3>
     <input type="text" id="name-input" placeholder="名字">
     <input type="text" id="id-input" placeholder="專屬 ID">
-    <button class="btn" id="save-profile">儲存修改</button>
-    <button class="btn" id="login-btn" style="background:#444">Google 登入</button>
-    <button class="btn" id="logout-btn" style="background:#c0392b; display:none;">登出</button>
-</div>
-
-<div class="modal" id="modal-add">
-    <h3>＋ 新增好友</h3>
-    <input type="text" id="search-id" placeholder="輸入好友 ID">
-    <button class="btn" id="confirm-add">送出請求</button>
+    <button class="btn" id="save-profile">儲存</button>
+    <button class="btn" id="login-btn" style="background:#444">登入</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
@@ -128,24 +109,34 @@
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-    let currentUser = null;
-    let allData = {}; // 存放所有項目的成績
-    let currentEvent = "333";
+    let currentUser = null, allData = {}, currentEvent = "333", currentScramble = "";
     let timerState = "IDLE", startTime, timerInterval, holdTimeout;
 
-    // --- 專業打亂演算法集 ---
+    // --- 專業打亂 ---
+    const genMoves = (moves, len, suffix=["","'","2"]) => {
+        let res = [], last = "";
+        for(let i=0; i<len; i++) {
+            let m = moves[Math.floor(Math.random()*moves.length)];
+            while(m === last) m = moves[Math.floor(Math.random()*moves.length)];
+            res.push(m + suffix[Math.floor(Math.random()*suffix.length)]);
+            last = m;
+        }
+        return res.join(" ");
+    };
+
     const scramblers = {
-        "222": () => genMoves(["U","D","L","R","F","B"], 9),
         "333": () => genMoves(["U","D","L","R","F","B"], 20),
+        "222": () => genMoves(["U","R","F"], 9),
         "444": () => genMoves(["U","D","L","R","F","B","Uw","Rw","Fw"], 40),
-        "555": () => genMoves(["U","D","L","R","F","B","Uw","Dw","Lw","Rw","Fw","Bw"], 60),
-        "666": () => genMoves(["U","D","L","R","F","B","2U","2D","2L","2R","2F","2B","3U","3R"], 80),
-        "777": () => genMoves(["U","D","L","R","F","B","2U","2D","2L","2R","2F","2B","3U","3D","3L","3R","3F","3B"], 100),
-        "pyram": () => genMoves(["U","L","R","B"], 12) + " tips: " + genMoves(["u","l","r","b"], 3),
-        "skewb": () => genMoves(["U","L","R","B"], 10),
+        "pyram": () => {
+            let s = genMoves(["U","L","R","B"], 10);
+            ["u","l","r","b"].forEach(t => { if(Math.random()>0.5) s += ` ${t}${Math.random()>0.5?"'":""}`; });
+            return s;
+        },
+        "skewb": () => genMoves(["U","L","R","B"], 8),
         "minx": () => {
             let s = "";
-            for(let i=0; i<7; i++){
+            for(let i=0; i<7; i++) {
                 for(let j=0; j<10; j++) s += (Math.random()>0.5?"R++ ":"R-- ") + (Math.random()>0.5?"D++ ":"D-- ");
                 s += "U\n";
             }
@@ -153,123 +144,98 @@
         }
     };
 
-    function genMoves(moves, len) {
-        let res = [], last = "";
-        for(let i=0; i<len; i++){
-            let m = moves[Math.floor(Math.random()*moves.length)];
-            while(m === last) m = moves[Math.floor(Math.random()*moves.length)];
-            res.push(m + ["","'","2"][Math.floor(Math.random()*3)]);
-            last = m;
-        }
-        return res.join(" ");
-    }
-
     const generateScramble = () => {
-        document.getElementById('scramble').innerText = scramblers[currentEvent] ? scramblers[currentEvent]() : scramblers["333"]();
+        currentScramble = (scramblers[currentEvent] || scramblers["333"])();
+        document.getElementById('scramble').innerText = currentScramble;
     };
 
-    // --- 介面功能 ---
-    document.getElementById('event-selector').onchange = (e) => {
-        currentEvent = e.target.value;
-        document.getElementById('history-label').innerText = currentEvent + " 成績";
-        updateStatsUI();
-        generateScramble();
-    };
-
-    const socialBar = document.getElementById('social-bar');
-    const showBtn = document.getElementById('show-sidebar-btn');
-    document.getElementById('hide-sidebar-btn').onclick = () => { socialBar.classList.add('collapsed'); showBtn.style.display='flex'; };
-    showBtn.onclick = () => { socialBar.classList.remove('collapsed'); showBtn.style.display='none'; };
-
+    // --- 功能邏輯 ---
+    window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
     window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
-    document.getElementById('open-set-modal').onclick = () => document.getElementById('modal-settings').classList.add('active');
-    document.getElementById('open-add-modal').onclick = () => document.getElementById('modal-add').classList.add('active');
 
-    // --- 計時與統計 ---
-    function updateStatsUI() {
+    const updateStatsUI = () => {
         const solves = allData[currentEvent] || [];
-        const display = document.getElementById('solve-list-ui');
-        display.innerHTML = solves.slice(0, 20).map(s => `<div class="solve-item"><b>${s.time.toFixed(3)}</b><small>${new Date(s.id).toLocaleTimeString()}</small></div>`).join('');
-        
+        const list = document.getElementById('solve-list-ui');
+        list.innerHTML = solves.map((s, idx) => `
+            <div class="solve-item" onclick="showDetail(${idx})">
+                <span><b>${s.time.toFixed(3)}</b></span>
+                <span class="del-btn" onclick="deleteSolve(event, ${idx})">✕</span>
+            </div>
+        `).join('');
+
         const calcAvg = (n) => {
             if(solves.length < n) return "--";
             const lastN = solves.slice(0, n).map(s => s.time);
-            return (lastN.reduce((a,b)=>a+b, 0)/n).toFixed(3);
+            return (lastN.reduce((a,b)=>a+b,0)/n).toFixed(3);
         };
         document.getElementById('ao5-val').innerText = calcAvg(5);
         document.getElementById('ao12-val').innerText = calcAvg(12);
-    }
+    };
 
+    window.showDetail = (idx) => {
+        const s = allData[currentEvent][idx];
+        document.getElementById('detail-content').innerHTML = `
+            <p><b>項目：</b>${currentEvent}</p>
+            <p><b>時間：</b>${s.time.toFixed(3)}s</p>
+            <p><b>日期：</b>${new Date(s.id).toLocaleString()}</p>
+            <p><b>打亂公式：</b><br><span style="color:#aaa">${s.scramble || '無紀錄'}</span></p>
+        `;
+        openModal('modal-detail');
+    };
+
+    window.deleteSolve = (e, idx) => {
+        e.stopPropagation();
+        if(confirm("確定要刪除這筆成績嗎？")) {
+            allData[currentEvent].splice(idx, 1);
+            updateStatsUI();
+            if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
+        }
+    };
+
+    // --- 計時核心 ---
     const stopTimer = () => {
         clearInterval(timerInterval);
         timerState = "IDLE";
         const time = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
         if(!allData[currentEvent]) allData[currentEvent] = [];
-        allData[currentEvent].unshift({ time, id: Date.now() });
+        allData[currentEvent].unshift({ time, id: Date.now(), scramble: currentScramble });
         updateStatsUI();
         if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
         generateScramble();
     };
 
     window.onkeydown = (e) => {
-        if(e.code === 'Space'){
+        if(e.code==='Space') {
             e.preventDefault();
-            if(timerState === "RUNNING") stopTimer();
-            else if(timerState === "IDLE"){
-                timerState = "READY";
-                document.getElementById('timer-display').style.color = "var(--ready)";
-                holdTimeout = setTimeout(() => {
-                    timerState = "GO";
-                    document.getElementById('timer-display').style.color = "var(--go)";
-                    document.getElementById('timer-display').innerText = "0.000";
-                }, 500);
+            if(timerState==="RUNNING") stopTimer();
+            else if(timerState==="IDLE") {
+                timerState="READY"; document.getElementById('timer-display').style.color="var(--ready)";
+                holdTimeout = setTimeout(() => { timerState="GO"; document.getElementById('timer-display').style.color="var(--go)"; document.getElementById('timer-display').innerText="0.000"; }, 500);
             }
         }
     };
     window.onkeyup = (e) => {
-        if(e.code === 'Space'){
+        if(e.code==='Space') {
             clearTimeout(holdTimeout);
-            if(timerState === "GO"){
+            if(timerState==="GO") {
                 startTime = performance.now();
-                timerInterval = setInterval(() => {
-                    document.getElementById('timer-display').innerText = ((performance.now() - startTime)/1000).toFixed(3);
-                }, 10);
-                timerState = "RUNNING";
-                document.getElementById('timer-display').style.color = "var(--text)";
-            } else {
-                timerState = "IDLE";
-                document.getElementById('timer-display').style.color = "var(--text)";
-            }
+                timerInterval = setInterval(() => { document.getElementById('timer-display').innerText=((performance.now()-startTime)/1000).toFixed(3); }, 10);
+                timerState="RUNNING"; document.getElementById('timer-display').style.color="var(--text)";
+            } else { timerState="IDLE"; document.getElementById('timer-display').style.color="var(--text)"; }
         }
     };
 
-    // --- Firebase 帳號同步 ---
-    onAuthStateChanged(auth, async (user) => {
-        if(user){
+    document.getElementById('event-selector').onchange = (e) => { currentEvent = e.target.value; updateStatsUI(); generateScramble(); };
+    onAuthStateChanged(auth, user => {
+        if(user) {
             currentUser = user;
-            const userRef = doc(db, "users", user.uid);
-            onSnapshot(userRef, (s) => {
-                if(s.exists()){
-                    const data = s.data();
-                    allData = data.allData || {};
-                    updateStatsUI();
-                    document.getElementById('name-input').value = data.displayName || "";
-                    document.getElementById('id-input').value = data.customID || "";
-                }
-            });
-            document.getElementById('logout-btn').style.display = "block";
+            onSnapshot(doc(db, "users", user.uid), s => { if(s.exists()) { allData = s.data().allData || {}; updateStatsUI(); } });
         }
     });
 
     document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
-    document.getElementById('save-profile').onclick = async () => {
-        await updateDoc(doc(db, "users", currentUser.uid), {
-            displayName: document.getElementById('name-input').value,
-            customID: document.getElementById('id-input').value
-        });
-        alert("資料已更新！");
-        closeAllModals();
-    };
+    document.getElementById('hide-sidebar-btn').onclick = () => { document.getElementById('social-bar').classList.add('collapsed'); document.getElementById('show-sidebar-btn').style.display='flex'; };
+    document.getElementById('show-sidebar-btn').onclick = () => { document.getElementById('social-bar').classList.remove('collapsed'); document.getElementById('show-sidebar-btn').style.display='none'; };
 
     generateScramble();
 </script>
