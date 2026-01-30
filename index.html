@@ -23,7 +23,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
 
 #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; text-align: center; }
 #scramble { padding: 25px; font-size: 1.1rem; min-height: 70px; color: var(--subtext); line-height: 1.4; white-space: normal; word-break: break-word; }
-#timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; }
+#timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
 #history-panel { width: 250px; background: rgba(0,0,0,0.1); padding: 15px; border-left: 1px solid #333; overflow-y: auto; }
 .solve-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #444; cursor: pointer; }
@@ -53,7 +53,6 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 .req-btns { display: flex; gap: 5px; }
 .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; border: none; color: white; }
 
-/* 側邊欄內部的聊天介面樣式 */
 #sidebar-chat-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel); display: none; flex-direction: column; z-index: 10; }
 #sidebar-chat-view.active { display: flex; }
 #chat-back-btn { padding: 15px; cursor: pointer; background: rgba(0,0,0,0.2); border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
@@ -367,6 +366,7 @@ if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
 };
 
 const display = document.getElementById('timer-display');
+
 function stopTimer() {
 clearInterval(timerInterval); timerState = "IDLE";
 const time = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
@@ -376,6 +376,7 @@ renderSolves(); generateScramble();
 if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
 display.style.color = "var(--text)";
 }
+
 function startTimer() {
 clearInterval(insInterval);
 startTime = performance.now();
@@ -385,29 +386,50 @@ display.innerText = ((performance.now()-startTime)/1000).toFixed(document.getEle
 timerState = "RUNNING"; display.style.color = "var(--text)";
 }
 
-window.onkeydown = (e) => {
-if(e.code === 'Space'){
-e.preventDefault();
-if(timerState === "RUNNING") stopTimer();
-else if(timerState === "IDLE") {
-timerState = "READY"; display.style.color = "var(--ready)";
-holdTimeout = setTimeout(() => { timerState = "GO"; display.style.color = "var(--go)"; display.innerText = "0.000"; }, 500);
-} else if(timerState === "INSPECTION") startTimer();
+// 核心計時觸發邏輯
+function handleDown(e) {
+    if(e.type === 'keydown' && e.code !== 'Space') return;
+    if(e.type === 'touchstart' && document.getElementById('start-method').value !== 'tc') return;
+    if(e.target.closest('#social-bar') || e.target.closest('.modal') || e.target.closest('select')) return;
+
+    if(e.type === 'keydown') e.preventDefault();
+
+    if(timerState === "RUNNING") {
+        stopTimer();
+    } else if(timerState === "IDLE") {
+        timerState = "READY"; display.style.color = "var(--ready)";
+        holdTimeout = setTimeout(() => { 
+            timerState = "GO"; display.style.color = "var(--go)"; 
+            display.innerText = "0.000"; 
+        }, 500);
+    } else if(timerState === "INSPECTION") {
+        startTimer();
+    }
 }
-};
-window.onkeyup = (e) => {
-if(e.code === 'Space'){
-clearTimeout(holdTimeout);
-if(timerState === "GO") {
-const ins = document.getElementById('inspection-select').value;
-if(ins > 0) {
-timerState = "INSPECTION"; let left = ins; display.style.color = "var(--ready)";
-display.innerText = left;
-insInterval = setInterval(() => { left--; display.innerText = left; if(left<=0) startTimer(); }, 1000);
-} else startTimer();
-} else { timerState = "IDLE"; display.style.color = "var(--text)"; }
+
+function handleUp(e) {
+    if(e.type === 'keyup' && e.code !== 'Space') return;
+    if(e.type === 'touchend' && document.getElementById('start-method').value !== 'tc') return;
+    
+    clearTimeout(holdTimeout);
+    if(timerState === "GO") {
+        const ins = document.getElementById('inspection-select').value;
+        if(ins > 0) {
+            timerState = "INSPECTION"; let left = ins; display.style.color = "var(--ready)";
+            display.innerText = left;
+            insInterval = setInterval(() => { left--; display.innerText = left; if(left<=0) startTimer(); }, 1000);
+        } else {
+            startTimer();
+        }
+    } else if(timerState === "READY") {
+        timerState = "IDLE"; display.style.color = "var(--text)";
+    }
 }
-};
+
+window.onkeydown = handleDown;
+window.onkeyup = handleUp;
+document.addEventListener('touchstart', handleDown, {passive: false});
+document.addEventListener('touchend', handleUp, {passive: false});
 
 // --- 好友與即時聊天系統 ---
 let chatUnsubscribe = null;
@@ -470,7 +492,6 @@ alert(i18n[currentLang].msg_req_sent);
 document.getElementById('target-friend-id').value = "";
 };
 
-// --- 側邊欄聊天切換 ---
 async function openSidebarChat(uid, name) {
 currentChatUid = uid;
 document.getElementById('chat-title-name').innerText = name;
