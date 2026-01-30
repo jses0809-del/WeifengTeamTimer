@@ -35,13 +35,18 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
 .overlay.active { display:block; }
 
 .tab-nav { display: flex; border-bottom: 1px solid #444; margin-bottom: 15px; }
-.tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; }
+.tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.9rem; }
 .tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
 input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 6px; margin: 8px 0; box-sizing: border-box; }
 .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+
+/* 側邊欄專用分頁樣式 */
+.side-tab-nav { display: flex; border-bottom: 1px solid #333; margin-bottom: 10px; }
+.side-tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.85rem; transition: 0.2s; }
+.side-tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
 </style>
 </head>
 <body class="dark-theme">
@@ -57,9 +62,19 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 <div id="display-name-sidebar" data-i18n="not_logged_in">未登入</div>
 <div id="display-id-sidebar" style="font-size:0.8rem; color:var(--accent);">#Guest</div>
 </div>
-<div style="padding:10px; flex:1; overflow-y:auto;">
-<small style="color:var(--subtext)" data-i18n="friend_list">好友列表 / 申請</small>
-<div id="friend-section"></div>
+<div style="flex:1; overflow-y:auto; display: flex; flex-direction: column;">
+<div class="side-tab-nav">
+<button class="side-tab-link active" onclick="switchSideTab(event, 'tab-friends')" data-i18n="label_friends">好友</button>
+<button class="side-tab-link" onclick="switchSideTab(event, 'tab-requests')" data-i18n="label_requests">申請</button>
+</div>
+<div id="friend-section" style="padding: 10px; flex: 1;">
+<div id="tab-friends" class="tab-pane active">
+<div id="friends-list-ui" style="color: var(--subtext); font-size: 0.9rem;">尚無好友</div>
+</div>
+<div id="tab-requests" class="tab-pane">
+<div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">尚無申請</div>
+</div>
+</div>
 </div>
 </div>
 
@@ -172,7 +187,8 @@ save_btn: "儲存修改", logout_btn: "登出帳號", label_theme: "主題",
 label_lang: "語言", label_start_method: "開始方法", opt_kb: "快捷鍵 (空白鍵)",
 opt_tc: "觸控開始", label_inspection: "15秒觀察", opt_off: "關閉",
 opt_on: "開啟 (15s)", label_decimals: "小數點位數", del_confirm: "確定刪除？",
-save_success: "存檔成功", id_limit: "三週內只能修改兩次 ID！", msg_scramble: "打亂公式：\n"
+save_success: "存檔成功", id_limit: "三週內只能修改兩次 ID！", msg_scramble: "打亂公式：\n",
+label_friends: "好友", label_requests: "申請"
 },
 "zh-CN": {
 not_logged_in: "未登录", friend_list: "好友列表 / 申请", history: "历史成绩",
@@ -182,7 +198,8 @@ save_btn: "保存修改", logout_btn: "登出账号", label_theme: "主题",
 label_lang: "语言", label_start_method: "开始方法", opt_kb: "快捷键 (空格键)",
 opt_tc: "觸控开始", label_inspection: "15秒观察", opt_off: "关闭",
 opt_on: "开启 (15s)", label_decimals: "小数点位数", del_confirm: "确定删除？",
-save_success: "保存成功", id_limit: "三周内只能修改两次 ID！", msg_scramble: "打乱公式：\n"
+save_success: "保存成功", id_limit: "三周内只能修改两次 ID！", msg_scramble: "打乱公式：\n",
+label_friends: "好友", label_requests: "申请"
 },
 "en": {
 not_logged_in: "Guest", friend_list: "Friends / Requests", history: "History",
@@ -192,7 +209,8 @@ save_btn: "Save Changes", logout_btn: "Logout", label_theme: "Theme",
 label_lang: "Language", label_start_method: "Start Method", opt_kb: "Keyboard (Space)",
 opt_tc: "Touch Start", label_inspection: "Inspection", opt_off: "OFF",
 opt_on: "ON (15s)", label_decimals: "Decimals", del_confirm: "Are you sure?",
-save_success: "Saved!", id_limit: "ID can only be changed twice every 3 weeks!", msg_scramble: "Scramble:\n"
+save_success: "Saved!", id_limit: "ID can only be changed twice every 3 weeks!", msg_scramble: "Scramble:\n",
+label_friends: "Friends", label_requests: "Requests"
 },
 "ja": {
 not_logged_in: "未ログイン", friend_list: "フレンド / 申請", history: "履歴",
@@ -202,7 +220,8 @@ save_btn: "変更を保存", logout_btn: "ログアウト", label_theme: "テー
 label_lang: "言語", label_start_method: "開始方法", opt_kb: "キーボード (スペース)",
 opt_tc: "タッチ開始", label_inspection: "インスペクション", opt_off: "オフ",
 opt_on: "オン (15s)", label_decimals: "小数点以下", del_confirm: "削除しますか？",
-save_success: "保存しました", id_limit: "IDの変更は3週間に2回までです！", msg_scramble: "スクランブル：\n"
+save_success: "保存しました", id_limit: "IDの変更は3週間に2回までです！", msg_scramble: "スクランブル：\n",
+label_friends: "フレンド", label_requests: "申請"
 }
 };
 
@@ -268,10 +287,18 @@ document.getElementById('scramble').innerHTML = currentScramble;
 
 // --- UI 控制 ---
 window.switchTab = (e, paneId) => {
-document.querySelectorAll('.tab-link, .tab-pane').forEach(el => el.classList.remove('active'));
+document.querySelectorAll('#modal-settings .tab-link, #modal-settings .tab-pane').forEach(el => el.classList.remove('active'));
 e.target.classList.add('active');
 document.getElementById(paneId).classList.add('active');
 };
+
+// 側邊欄專用的分頁切換函數
+window.switchSideTab = (e, paneId) => {
+document.querySelectorAll('.side-tab-link, #friend-section .tab-pane').forEach(el => el.classList.remove('active'));
+e.target.classList.add('active');
+document.getElementById(paneId).classList.add('active');
+};
+
 window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
 window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
 
