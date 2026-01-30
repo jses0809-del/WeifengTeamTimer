@@ -2,58 +2,50 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>WeiFeng Timer - Professional Social Edition</title>
+    <title>WeiFeng Timer - Multi-Event Pro</title>
     <style>
         :root { --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa; --ready: #ff4757; --go: #2ed573; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; user-select: none; }
 
-        /* 左側社交欄 - 支援收合 */
+        /* 左側社交欄 */
         #social-bar { width: 320px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; z-index: 1000; transition: transform 0.3s ease; }
         #social-bar.collapsed { transform: translateX(-320px); position: absolute; height: 100%; }
-        
         .nav-header { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.3); align-items: center; }
         .icon-btn { font-size: 20px; cursor: pointer; background: #333; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .icon-btn:hover { background: var(--accent); }
 
-        /* 右側主計時區 */
-        #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; transition: margin-left 0.3s ease; }
-        
-        /* 頂部打亂與項目選擇 */
+        /* 右側主區域 */
+        #main-stage { flex: 1; display: flex; flex-direction: column; position: relative; }
         #top-info { padding: 20px; text-align: center; }
-        #scramble { font-size: 1.4rem; color: #aaa; margin-bottom: 10px; min-height: 50px; }
-        #event-selector { background: #333; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        #scramble { font-size: 1.2rem; color: #aaa; margin-bottom: 10px; min-height: 60px; line-height: 1.4; max-width: 80%; margin-left: auto; margin-right: auto; }
+        
+        /* 項目選擇器 */
+        #event-selector { background: #3742fa; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
 
-        /* 計時器主體 */
-        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; }
+        /* 計時器 */
+        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; transition: color 0.1s; }
 
-        /* 成績統計區域 (AO5, AO12) */
-        #stats-bar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 40px; background: rgba(0,0,0,0.5); padding: 10px 30px; border-radius: 50px; font-size: 1.2rem; }
-        .stat-item span { color: var(--accent); font-weight: bold; }
+        /* 統計區 */
+        #stats-bar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 40px; background: rgba(0,0,0,0.6); padding: 12px 35px; border-radius: 50px; }
+        .stat-item b { color: var(--accent); font-size: 1.3rem; }
 
-        /* 歷史成績 (右側小欄) */
-        #history-panel { width: 180px; background: rgba(0,0,0,0.2); padding: 15px; overflow-y: auto; border-left: 1px solid #333; }
-        .solve-item { padding: 5px 0; border-bottom: 1px solid #333; font-family: monospace; font-size: 0.9rem; display: flex; justify-content: space-between; }
+        /* 歷史成績 */
+        #history-panel { width: 220px; background: rgba(0,0,0,0.2); padding: 15px; overflow-y: auto; border-left: 1px solid #333; }
+        .solve-item { padding: 8px 0; border-bottom: 1px solid #333; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
+        .solve-item:hover { color: var(--accent); }
 
-        /* 好友詳細視窗 */
-        #chat-window { position: absolute; right: 0; top: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: none; flex-direction: column; }
-        #chat-window.active { display: flex; }
-
-        /* 彈窗樣式 */
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 12px; z-index: 3000; display: none; width: 320px; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+        /* 彈窗 */
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 12px; z-index: 3000; display: none; width: 320px; box-shadow: 0 0 50px rgba(0,0,0,0.9); }
         .modal.active { display: block; }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2500; display:none; }
         .overlay.active { display:block; }
-
         input { width: 100%; padding: 12px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 6px; margin: 10px 0; box-sizing: border-box; }
         .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-        
-        /* 側邊三行按鈕(獨立出現在左上角以便收回後還能點開) */
-        #toggle-sidebar-btn { position: absolute; left: 15px; top: 15px; z-index: 1100; }
     </style>
 </head>
 <body>
 
-<div class="overlay" id="modal-overlay"></div>
+<div class="overlay" id="modal-overlay" onclick="closeAllModals()"></div>
 
 <div id="social-bar">
     <div class="nav-header">
@@ -61,10 +53,8 @@
         <button class="icon-btn" id="open-add-modal">＋</button>
         <button class="icon-btn" id="open-set-modal">⚙️</button>
     </div>
-    <div style="padding: 15px; font-weight: bold; color: #666; font-size: 0.8rem;">好友列表</div>
-    <div id="friend-list-ui" style="flex:1; overflow-y:auto; padding:10px;">
-        <div style="text-align:center; color:#444; margin-top:20px;">登入以同步好友</div>
-    </div>
+    <div style="padding: 15px; font-weight: bold; color: #888;">好友動態</div>
+    <div id="friend-list-ui" style="flex:1; overflow-y:auto; padding:10px;"></div>
 </div>
 
 <div id="main-stage">
@@ -72,53 +62,51 @@
     
     <div id="top-info">
         <select id="event-selector">
-            <option value="333">3x3x3</option>
-            <option value="222">2x2x2</option>
-            <option value="444">4x4x4</option>
-            <option value="oh">3x3 OH</option>
+            <optgroup label="立方體">
+                <option value="222">2x2x2</option>
+                <option value="333" selected>3x3x3</option>
+                <option value="444">4x4x4</option>
+                <option value="555">5x5x5</option>
+                <option value="666">6x6x6</option>
+                <option value="777">7x7x7</option>
+            </optgroup>
+            <optgroup label="異形">
+                <option value="pyram">金字塔 (Pyraminx)</option>
+                <option value="minx">五魔方 (Megaminx)</option>
+                <option value="skewb">斜轉 (Skewb)</option>
+            </optgroup>
         </select>
-        <div id="scramble">正在準備打亂公式...</div>
+        <div id="scramble">載入打亂中...</div>
     </div>
 
     <div id="timer-display">0.000</div>
 
     <div id="stats-bar">
-        <div class="stat-item">AO5: <span id="ao5-val">--</span></div>
-        <div class="stat-item">AO12: <span id="ao12-val">--</span></div>
-    </div>
-
-    <div id="chat-window">
-        <div style="padding:20px; background:#1a1a1a; display:flex; align-items:center; gap:15px;">
-            <button class="icon-btn" onclick="closeChat()">←</button>
-            <h3 id="chat-friend-name" style="margin:0">好友名字</h3>
-        </div>
-        <div style="flex:1; padding:20px; overflow-y:auto;">
-            <h4>好友近期成績</h4>
-            <div id="friend-solves-list" style="background:#111; padding:15px; border-radius:10px;"></div>
-        </div>
+        <div class="stat-item">AO5: <b id="ao5-val">--</b></div>
+        <div class="stat-item">AO12: <b id="ao12-val">--</b></div>
     </div>
 </div>
 
 <div id="history-panel">
-    <div style="font-weight:bold; margin-bottom:10px;">個人成績</div>
+    <div style="font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between;">
+        <span id="history-label">333 成績</span>
+    </div>
     <div id="solve-list-ui"></div>
 </div>
 
 <div class="modal" id="modal-settings">
     <h3>⚙️ 帳號設定</h3>
     <input type="text" id="name-input" placeholder="名字">
-    <input type="text" id="id-input" placeholder="專屬 ID (英數)">
+    <input type="text" id="id-input" placeholder="專屬 ID">
     <button class="btn" id="save-profile">儲存修改</button>
     <button class="btn" id="login-btn" style="background:#444">Google 登入</button>
     <button class="btn" id="logout-btn" style="background:#c0392b; display:none;">登出</button>
-    <button class="btn" onclick="closeAllModals()" style="background:transparent; color:#888;">取消</button>
 </div>
 
 <div class="modal" id="modal-add">
     <h3>＋ 新增好友</h3>
-    <input type="text" id="search-id" placeholder="輸入好友專屬 ID">
-    <button class="btn" id="confirm-add">發送請求</button>
-    <button class="btn" onclick="closeAllModals()" style="background:transparent; color:#888;">取消</button>
+    <input type="text" id="search-id" placeholder="輸入好友 ID">
+    <button class="btn" id="confirm-add">送出請求</button>
 </div>
 
 <script type="module">
@@ -141,151 +129,148 @@
     const provider = new GoogleAuthProvider();
 
     let currentUser = null;
-    let mySolves = [];
+    let allData = {}; // 存放所有項目的成績
+    let currentEvent = "333";
     let timerState = "IDLE", startTime, timerInterval, holdTimeout;
 
-    // --- 三行選單收合邏輯 ---
+    // --- 專業打亂演算法集 ---
+    const scramblers = {
+        "222": () => genMoves(["U","D","L","R","F","B"], 9),
+        "333": () => genMoves(["U","D","L","R","F","B"], 20),
+        "444": () => genMoves(["U","D","L","R","F","B","Uw","Rw","Fw"], 40),
+        "555": () => genMoves(["U","D","L","R","F","B","Uw","Dw","Lw","Rw","Fw","Bw"], 60),
+        "666": () => genMoves(["U","D","L","R","F","B","2U","2D","2L","2R","2F","2B","3U","3R"], 80),
+        "777": () => genMoves(["U","D","L","R","F","B","2U","2D","2L","2R","2F","2B","3U","3D","3L","3R","3F","3B"], 100),
+        "pyram": () => genMoves(["U","L","R","B"], 12) + " tips: " + genMoves(["u","l","r","b"], 3),
+        "skewb": () => genMoves(["U","L","R","B"], 10),
+        "minx": () => {
+            let s = "";
+            for(let i=0; i<7; i++){
+                for(let j=0; j<10; j++) s += (Math.random()>0.5?"R++ ":"R-- ") + (Math.random()>0.5?"D++ ":"D-- ");
+                s += "U\n";
+            }
+            return s;
+        }
+    };
+
+    function genMoves(moves, len) {
+        let res = [], last = "";
+        for(let i=0; i<len; i++){
+            let m = moves[Math.floor(Math.random()*moves.length)];
+            while(m === last) m = moves[Math.floor(Math.random()*moves.length)];
+            res.push(m + ["","'","2"][Math.floor(Math.random()*3)]);
+            last = m;
+        }
+        return res.join(" ");
+    }
+
+    const generateScramble = () => {
+        document.getElementById('scramble').innerText = scramblers[currentEvent] ? scramblers[currentEvent]() : scramblers["333"]();
+    };
+
+    // --- 介面功能 ---
+    document.getElementById('event-selector').onchange = (e) => {
+        currentEvent = e.target.value;
+        document.getElementById('history-label').innerText = currentEvent + " 成績";
+        updateStatsUI();
+        generateScramble();
+    };
+
     const socialBar = document.getElementById('social-bar');
     const showBtn = document.getElementById('show-sidebar-btn');
-    document.getElementById('hide-sidebar-btn').onclick = () => {
-        socialBar.classList.add('collapsed');
-        showBtn.style.display = 'flex';
-    };
-    showBtn.onclick = () => {
-        socialBar.classList.remove('collapsed');
-        showBtn.style.display = 'none';
-    };
+    document.getElementById('hide-sidebar-btn').onclick = () => { socialBar.classList.add('collapsed'); showBtn.style.display='flex'; };
+    showBtn.onclick = () => { socialBar.classList.remove('collapsed'); showBtn.style.display='none'; };
 
-    // --- 彈窗邏輯 ---
-    const openModal = (id) => {
-        document.getElementById('modal-overlay').classList.add('active');
-        document.getElementById(id).classList.add('active');
-    };
-    window.closeAllModals = () => {
-        document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
-    };
-    window.closeChat = () => document.getElementById('chat-window').classList.remove('active');
+    window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
+    document.getElementById('open-set-modal').onclick = () => document.getElementById('modal-settings').classList.add('active');
+    document.getElementById('open-add-modal').onclick = () => document.getElementById('modal-add').classList.add('active');
 
-    document.getElementById('open-set-modal').onclick = () => openModal('modal-settings');
-    document.getElementById('open-add-modal').onclick = () => openModal('modal-add');
-
-    // --- 計時核心與數據計算 ---
-    const timerDisplay = document.getElementById('timer-display');
-    
-    function calcAvg(n) {
-        if (mySolves.length < n) return "--";
-        const recent = mySolves.slice(0, n).map(s => s.time);
-        const sum = recent.reduce((a, b) => a + b, 0);
-        return (sum / n).toFixed(3);
-    }
-
+    // --- 計時與統計 ---
     function updateStatsUI() {
+        const solves = allData[currentEvent] || [];
+        const display = document.getElementById('solve-list-ui');
+        display.innerHTML = solves.slice(0, 20).map(s => `<div class="solve-item"><b>${s.time.toFixed(3)}</b><small>${new Date(s.id).toLocaleTimeString()}</small></div>`).join('');
+        
+        const calcAvg = (n) => {
+            if(solves.length < n) return "--";
+            const lastN = solves.slice(0, n).map(s => s.time);
+            return (lastN.reduce((a,b)=>a+b, 0)/n).toFixed(3);
+        };
         document.getElementById('ao5-val').innerText = calcAvg(5);
         document.getElementById('ao12-val').innerText = calcAvg(12);
-        document.getElementById('solve-list-ui').innerHTML = mySolves.slice(0, 20).map(s => `
-            <div class="solve-item"><span>${s.time.toFixed(3)}</span><small>${new Date(s.id).toLocaleTimeString()}</small></div>
-        `).join('');
     }
-
-    const startTimer = () => {
-        startTime = performance.now();
-        timerInterval = setInterval(() => {
-            timerDisplay.innerText = ((performance.now() - startTime) / 1000).toFixed(3);
-        }, 10);
-        timerState = "RUNNING";
-        timerDisplay.style.color = "var(--text)";
-    };
 
     const stopTimer = () => {
         clearInterval(timerInterval);
         timerState = "IDLE";
         const time = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
-        mySolves.unshift({ time, id: Date.now() });
+        if(!allData[currentEvent]) allData[currentEvent] = [];
+        allData[currentEvent].unshift({ time, id: Date.now() });
         updateStatsUI();
-        if(currentUser) {
-            updateDoc(doc(db, "users", currentUser.uid), { solves: mySolves });
-        }
+        if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
         generateScramble();
     };
 
     window.onkeydown = (e) => {
-        if (e.code === 'Space') {
+        if(e.code === 'Space'){
             e.preventDefault();
-            if (timerState === "RUNNING") stopTimer();
-            else if (timerState === "IDLE") {
+            if(timerState === "RUNNING") stopTimer();
+            else if(timerState === "IDLE"){
                 timerState = "READY";
-                timerDisplay.style.color = "var(--ready)";
+                document.getElementById('timer-display').style.color = "var(--ready)";
                 holdTimeout = setTimeout(() => {
                     timerState = "GO";
-                    timerDisplay.style.color = "var(--go)";
-                    timerDisplay.innerText = "0.000";
+                    document.getElementById('timer-display').style.color = "var(--go)";
+                    document.getElementById('timer-display').innerText = "0.000";
                 }, 500);
             }
         }
     };
-
     window.onkeyup = (e) => {
-        if (e.code === 'Space') {
+        if(e.code === 'Space'){
             clearTimeout(holdTimeout);
-            if (timerState === "GO") startTimer();
-            else { timerState = "IDLE"; timerDisplay.style.color = "var(--text)"; }
+            if(timerState === "GO"){
+                startTime = performance.now();
+                timerInterval = setInterval(() => {
+                    document.getElementById('timer-display').innerText = ((performance.now() - startTime)/1000).toFixed(3);
+                }, 10);
+                timerState = "RUNNING";
+                document.getElementById('timer-display').style.color = "var(--text)";
+            } else {
+                timerState = "IDLE";
+                document.getElementById('timer-display').style.color = "var(--text)";
+            }
         }
     };
 
-    // --- 社交與 Firebase ---
+    // --- Firebase 帳號同步 ---
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
+        if(user){
             currentUser = user;
             const userRef = doc(db, "users", user.uid);
             onSnapshot(userRef, (s) => {
-                const data = s.data();
-                mySolves = data.solves || [];
-                updateStatsUI();
-                document.getElementById('name-input').value = data.displayName || "";
-                document.getElementById('id-input').value = data.customID || "";
-                if(data.friends?.length > 0) syncFriends(data.friends);
+                if(s.exists()){
+                    const data = s.data();
+                    allData = data.allData || {};
+                    updateStatsUI();
+                    document.getElementById('name-input').value = data.displayName || "";
+                    document.getElementById('id-input').value = data.customID || "";
+                }
             });
-            document.getElementById('login-btn').style.display = "none";
             document.getElementById('logout-btn').style.display = "block";
         }
     });
 
-    function syncFriends(uids) {
-        const q = query(collection(db, "users"), where("__name__", "in", uids));
-        onSnapshot(q, (s) => {
-            document.getElementById('friend-list-ui').innerHTML = s.docs.map(d => `
-                <div class="solve-item" style="cursor:pointer; padding:10px; background:#2a2a2a; border-radius:5px; margin-bottom:5px;" 
-                     onclick="showFriend('${d.data().displayName}', '${JSON.stringify(d.data().solves || []).replace(/"/g, '&quot;')}')">
-                    <b>${d.data().displayName}</b> <small>#${d.data().customID}</small>
-                </div>
-            `).join('');
-        });
-    }
-
-    window.showFriend = (name, solvesStr) => {
-        const solves = JSON.parse(solvesStr);
-        document.getElementById('chat-friend-name').innerText = name;
-        document.getElementById('friend-solves-list').innerHTML = solves.slice(0,10).map(s => `<div>${s.time}s</div>`).join('') || "無成績";
-        document.getElementById('chat-window').classList.add('active');
-    };
-
     document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
-    document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
     document.getElementById('save-profile').onclick = async () => {
         await updateDoc(doc(db, "users", currentUser.uid), {
             displayName: document.getElementById('name-input').value,
             customID: document.getElementById('id-input').value
         });
-        alert("存檔成功");
+        alert("資料已更新！");
         closeAllModals();
     };
 
-    function generateScramble() {
-        const moves = ["U", "D", "L", "R", "F", "B"];
-        let s = [];
-        for(let i=0; i<20; i++) s.push(moves[Math.floor(Math.random()*6)] + ["","'","2"][Math.floor(Math.random()*3)]);
-        document.getElementById('scramble').innerText = s.join(" ");
-    }
     generateScramble();
 </script>
 </body>
