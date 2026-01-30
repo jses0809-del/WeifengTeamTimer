@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeiFeng Timer - 雲端版</title>
+    <style>
+        :root { --bg: #121212; --text: #eee; --ready: #ff4757; --go: #2ed573; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; margin: 0; }
+        #scramble { padding: 20px; font-size: 1.2rem; color: #888; text-align: center; min-height: 60px; }
+        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; }
+        #stats-bar { width: 100%; display: flex; justify-content: space-around; padding: 20px; background: #1a1a1a; }
+        .btn-group { margin-top: 10px; }
+        button { cursor: pointer; padding: 5px 10px; background: #333; color: white; border: none; border-radius: 4px; }
+        .history-item { border-bottom: 1px solid #333; padding: 5px; display: flex; justify-content: space-between; width: 250px; }
+        .dnf { color: #ff4757; text-decoration: line-through; }
+    </style>
+</head>
+<body>
+
+<div id="scramble">正在生成打亂公式...</div>
+
+<div id="timer-display">0.000</div>
+
+<div id="stats-bar">
+    <div>AO5: <span id="ao5">--</span></div>
+    <div>AO12: <span id="ao12">--</span></div>
+    <button id="login-btn">Google 登入</button>
+</div>
+
+<div id="history-panel">
+    <h3>歷史成績 (點擊成績可編輯)</h3>
+    <div id="solve-list"></div>
+</div>
+
+<script type="module">
+    // --- Firebase 初始化 ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
+        authDomain: "weifengtimer-17ea9.firebaseapp.com",
+        projectId: "weifengtimer-17ea9",
+        storageBucket: "weifengtimer-17ea9.firebasestorage.app",
+        messagingSenderId: "852083740797",
+        appId: "1:852083740797:web:4b2326142554cf8654a114",
+        measurementId: "G-REE1EVZ4VJ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // --- 全域變數 ---
+    let solves = []; // 儲存格式: {time: 10.521, isPlusTwo: false, isDNF: false, id: Date.now()}
+    let timerState = "IDLE";
+    let startTime, timerInterval, holdTimeout, currentUser = null;
+
+    // --- 核心功能：統計優化 ---
+    function calculateAverage(n) {
+        if (solves.length < n) return "--";
+        // 取得最近 n 筆，並將 DNF 視為無限大
+        let recent = solves.slice(0, n).map(s => s.isDNF ? Infinity : (s.isPlusTwo ? s.time + 2 : s.time));
+        
+        recent.sort((a, b) => a - b);
+        recent.pop();   // 剔除最慢
+        recent.shift(); // 剔除最快
+
+        if (recent.includes(Infinity)) return "DNF";
+        const sum = recent.reduce((a, b) => a + b, 0);
+        return (sum / (n - 2)).toFixed(3);
+    }
+
+    // --- 核心功能：成績操作 ---
+    window.modifySolve = async (id, type) => {
+        const index = solves.findIndex(s => s.id === id);
+        if (index === -1) return;
+
+        if (type === 'plusTwo') solves[index].isPlusTwo = !solves[index].isPlusTwo;
+        else if (type === 'DNF') solves[index].isDNF = !solves[index].isDNF;
+        else if (type === 'delete') {
+            if(confirm("確定刪除這筆成績？")) solves.splice(index, 1);
+        }
+
+        updateUI();
+        syncToCloud();
+    };
+
+    // --- 計時器邏輯 ---
+    const display = document.getElementById('timer-display');
+    
+    function handleKeyDown(e) {
+        if (e.code !== 'Space') return;
+        if (timerState === "RUNNING") {
+            stopTimer();
+        } else if (timerState === "IDLE") {
+            timerState = "READY";
+            display.style.color = "var(--ready)";
+            holdTimeout = setTimeout(() => {
+                timerState = "GO";
+                display.style.color = "var(--go)";
+                display.innerText = "0.000";
+            }, 500);
+        }
+    }
+
+    function handleKeyUp(e) {
+        if (e.code !== 'Space') return;
+        clearTimeout(holdTimeout);
+        if (timerState === "GO") {
+            startTime = performance.now();
+            timerInterval = setInterval(() => {
+                display.innerText = ((performance.now() - startTime) / 1000).toFixed(3);
+            }, 10);
+            timerState = "RUNNING";
+            display.style.color = "var(--text)";
+        } else {
+            timerState = "IDLE";
+            display.style.color = "var(--text)";
+        }
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+        timerState = "IDLE";
+        const finalTime = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
+        solves.unshift({ time: finalTime, isPlusTwo: false, isDNF: false, id: Date.now() });
+        updateUI();
+        syncToCloud();
+        generateScramble();
+    }
+
+    // --- UI 更新與雲端同步 ---
+    function updateUI() {
+        document.getElementById('ao5').innerText = calculateAverage(5);
+        document.getElementById('ao12').innerText = calculateAverage(12);
+        
+        const list = document.getElementById('solve-list');
+        list.innerHTML = solves.map(s => `
+            <div class="history-item">
+                <span class="${s.isDNF ? 'dnf' : ''}">${s.isDNF ? 'DNF' : (s.isPlusTwo ? (s.time+2).toFixed(3)+'+' : s.time.toFixed(3))}</span>
+                <div class="btn-group">
+                    <button onclick="modifySolve(${s.id}, 'plusTwo')">+2</button>
+                    <button onclick="modifySolve(${s.id}, 'DNF')">DNF</button>
+                    <button onclick="modifySolve(${s.id}, 'delete')">X</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function syncToCloud() {
+        if (!currentUser) return;
+        await setDoc(doc(db, "users", currentUser.uid), { solves });
+    }
+
+    // --- 登入邏輯 ---
+    document.getElementById('login-btn').onclick = async () => {
+        const res = await signInWithPopup(auth, provider);
+        currentUser = res.user;
+        document.getElementById('login-btn').innerText = currentUser.displayName;
+        const data = await getDoc(doc(db, "users", currentUser.uid));
+        if (data.exists()) {
+            solves = data.data().solves || [];
+            updateUI();
+        }
+    };
+
+    // --- 簡單打亂生成 ---
+    function generateScramble() {
+        const moves = ["U", "D", "L", "R", "F", "B"];
+        const mods = ["", "'", "2"];
+        let s = [];
+        for(let i=0; i<20; i++) s.push(moves[Math.floor(Math.random()*6)] + mods[Math.floor(Math.random()*3)]);
+        document.getElementById('scramble').innerText = s.join(" ");
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    generateScramble();
+</script>
+</body>
+</html>
