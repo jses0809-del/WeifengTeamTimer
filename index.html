@@ -48,12 +48,22 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 .side-tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.85rem; transition: 0.2s; }
 .side-tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
 
-/* 申請分頁內的小工具樣式 */
+/* 申請分頁與好友列表 */
 .request-input-group { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
 .small-label { font-size: 0.75rem; color: var(--subtext); margin-bottom: 4px; display: block; }
-.req-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 5px; }
+.req-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; }
 .req-btns { display: flex; gap: 5px; }
 .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; border: none; color: white; }
+
+/* 聊天介面樣式 */
+#chat-modal { width: 450px; height: 500px; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+#chat-header { padding: 15px; background: rgba(0,0,0,0.2); font-weight: bold; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+#chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-break: break-word; }
+.msg.mine { align-self: flex-end; background: var(--accent); color: white; }
+.msg.theirs { align-self: flex-start; background: #333; color: white; }
+#chat-input-area { padding: 10px; display: flex; gap: 10px; border-top: 1px solid #333; }
+#chat-input { flex: 1; margin: 0; }
 </style>
 </head>
 <body class="dark-theme">
@@ -170,10 +180,22 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 </div>
 </div>
 
+<div class="modal" id="chat-modal">
+<div id="chat-header">
+<span id="chat-target-name">Chat</span>
+<span style="cursor:pointer" onclick="closeAllModals()">✕</span>
+</div>
+<div id="chat-messages"></div>
+<div id="chat-input-area">
+<input type="text" id="chat-input" placeholder="Type a message...">
+<button class="btn" style="width:60px; margin:0;" id="send-msg-btn">➤</button>
+</div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs, arrayUnion, arrayRemove, addDoc, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
@@ -314,8 +336,14 @@ e.target.classList.add('active');
 document.getElementById(paneId).classList.add('active');
 };
 
-window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
-window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
+window.openModal = (id) => { 
+document.getElementById('modal-overlay').classList.add('active'); 
+document.getElementById(id).classList.add('active'); 
+};
+window.closeAllModals = () => {
+document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
+if(unsubscribeChat) unsubscribeChat();
+};
 
 function renderSolves() {
 const solves = allData[currentEvent] || [];
@@ -388,7 +416,10 @@ insInterval = setInterval(() => { left--; display.innerText = left; if(left<=0) 
 }
 };
 
-// --- 好友系統核心 ---
+// --- 好友與聊天系統核心 ---
+let currentChatFriendId = null;
+let unsubscribeChat = null;
+
 async function renderRequests(incoming) {
 const ui = document.getElementById('requests-list-ui');
 if(!incoming || incoming.length === 0) { ui.innerText = "尚無申請"; return; }
@@ -416,6 +447,7 @@ const snap = await getDoc(doc(db, "users", uid));
 const d = snap.data();
 const div = document.createElement('div');
 div.className = "req-item";
+div.onclick = () => openChat(uid, d.displayName);
 div.innerHTML = `<span>${d.displayName} (#${d.customID})</span>`;
 ui.appendChild(div);
 }
@@ -444,6 +476,49 @@ await updateDoc(doc(db, "users", targetDoc.id), { incomingRequests: arrayUnion(c
 alert(i18n[currentLang].msg_req_sent);
 document.getElementById('target-friend-id').value = "";
 };
+
+// --- 聊天邏輯 ---
+async function openChat(friendId, friendName) {
+currentChatFriendId = friendId;
+document.getElementById('chat-target-name').innerText = friendName;
+document.getElementById('chat-messages').innerHTML = "";
+openModal('chat-modal');
+
+const chatId = [currentUser.uid, friendId].sort().join("_");
+const chatRef = collection(db, "chats", chatId, "messages");
+const q = query(chatRef, orderBy("timestamp", "asc"));
+
+if(unsubscribeChat) unsubscribeChat();
+unsubscribeChat = onSnapshot(q, (snapshot) => {
+const msgContainer = document.getElementById('chat-messages');
+msgContainer.innerHTML = "";
+snapshot.forEach((doc) => {
+const data = doc.data();
+const msgDiv = document.createElement('div');
+msgDiv.className = `msg ${data.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
+msgDiv.innerText = data.text;
+msgContainer.appendChild(msgDiv);
+});
+msgContainer.scrollTop = msgContainer.scrollHeight;
+});
+}
+
+document.getElementById('send-msg-btn').onclick = sendMessage;
+document.getElementById('chat-input').onkeydown = (e) => { if(e.key === 'Enter') sendMessage(); };
+
+async function sendMessage() {
+const input = document.getElementById('chat-input');
+const text = input.value.trim();
+if(!text || !currentChatFriendId) return;
+
+const chatId = [currentUser.uid, currentChatFriendId].sort().join("_");
+await addDoc(collection(db, "chats", chatId, "messages"), {
+senderId: currentUser.uid,
+text: text,
+timestamp: serverTimestamp()
+});
+input.value = "";
+}
 
 // --- Firebase 核心監聽 ---
 onAuthStateChanged(auth, async user => {
