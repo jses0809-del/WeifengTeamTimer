@@ -2,194 +2,161 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeiFeng Timer - Ultimate Custom</title>
+    <title>WeiFeng Timer - 社群聯網版</title>
     <style>
-        :root { 
-            --bg: #121212; 
-            --panel: #1e1e1e; 
-            --text: #ffffff; 
-            --accent: #3742fa; 
-            --ready: #ff4757; 
-            --go: #2ed573; 
-        }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; transition: background 0.3s; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+        :root { --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        /* 設定面板 */
-        #settings-panel {
-            position: fixed; left: -320px; top: 0; width: 300px; height: 100%; 
-            background: var(--panel); transition: 0.3s; padding: 25px; box-shadow: 2px 0 15px rgba(0,0,0,0.7); z-index: 200; overflow-y: auto;
-        }
-        #settings-panel.open { left: 0; }
-        .setting-section { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #333; }
-        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; }
+        /* 左側：好友與訊息欄 */
+        #social-sidebar { width: 280px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; }
+        .social-section { padding: 15px; border-bottom: 1px solid #333; flex: 1; overflow-y: auto; }
+        .friend-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #2a2a2a; margin-bottom: 5px; border-radius: 5px; font-size: 0.9rem; }
+        .friend-solve { font-size: 0.75rem; color: #2ed573; }
 
-        /* UI 元件 */
-        #header { width: 100%; padding: 15px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); z-index: 100; }
-        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; text-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        #scramble { padding: 20px; font-size: 1.3rem; color: #ccc; text-align: center; width: 85%; max-width: 800px; min-height: 70px; word-wrap: break-word; }
-        
-        input[type="text"], input[type="color"] { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
-        button { cursor: pointer; border: none; padding: 10px 15px; border-radius: 5px; background: var(--accent); color: white; font-weight: bold; transition: opacity 0.2s; }
-        button:hover { opacity: 0.8; }
-        
-        .user-tag { font-size: 0.9rem; color: var(--accent); background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; }
+        /* 中間：計時主區 */
+        #main-timer { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+        #timer-display { font-size: 15vw; font-weight: bold; margin: auto; }
+        #scramble { padding: 30px; text-align: center; color: #888; font-size: 1.2rem; }
+
+        /* 右側：個人成績 */
+        #history-sidebar { width: 200px; background: rgba(0,0,0,0.2); padding: 15px; }
+
+        input, button { background: #333; color: white; border: 1px solid #444; padding: 8px; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        button { background: var(--accent); border: none; cursor: pointer; font-weight: bold; }
+        .chat-box { height: 150px; background: #121212; margin-top: 10px; padding: 5px; font-size: 0.8rem; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-<div id="settings-panel">
-    <h3>⚙️ 偏好設定</h3>
-    
-    <div class="setting-section">
-        <label>個人名字 (Display Name)</label>
-        <input type="text" id="name-input" placeholder="你的名字">
+<div id="social-sidebar">
+    <div class="social-section">
+        <h4>🔍 找好友</h4>
+        <input type="text" id="search-id" placeholder="輸入好友 ID...">
+        <button id="add-friend-btn" style="margin-top:5px">加好友</button>
     </div>
-
-    <div class="setting-section">
-        <label>專屬 ID (英文+數字，不可重複)</label>
-        <input type="text" id="id-input" placeholder="例如: weifeng01">
-        <p id="id-status" style="font-size: 0.7rem; margin-top: 5px;"></p>
+    <div class="social-section">
+        <h4>👥 好友成績動態</h4>
+        <div id="friends-list">載入中...</div>
     </div>
-
-    <div class="setting-section">
-        <label>背景顏色</label>
-        <input type="color" id="bg-color-picker" value="#121212">
-    </div>
-
-    <div class="setting-section">
-        <label>主題色 (按鈕/文字)</label>
-        <input type="color" id="accent-color-picker" value="#3742fa">
-    </div>
-
-    <button id="save-settings" style="width: 100%;">儲存並套用</button>
-    <button id="close-settings" style="width: 100%; background: #444; margin-top: 10px;">取消</button>
-</div>
-
-<div id="header">
-    <div style="display:flex; gap:10px; align-items:center;">
-        <button id="open-settings" style="background:#444">⚙️</button>
-        <div id="user-info">
-            <b id="display-name">Guest</b> 
-            <span id="display-id" class="user-tag">#ID</span>
-        </div>
-    </div>
-    <div class="user-controls">
-        <button id="login-btn">Google 登入</button>
-        <button id="logout-btn" style="display:none; background:#444">登出</button>
+    <div class="social-section" style="flex: 0 0 250px;">
+        <h4>💬 聊天室 (群體)</h4>
+        <div id="chat-content" class="chat-box"></div>
+        <input type="text" id="chat-input" placeholder="說點什麼..." style="margin-top:5px">
     </div>
 </div>
 
-<div id="scramble">...</div>
-<div id="timer-display">0.000</div>
+<div id="main-timer">
+    <div id="scramble">...</div>
+    <div id="timer-display">0.000</div>
+    <div style="padding: 20px;">
+        <span id="my-info">未登入</span>
+        <button id="login-btn" style="width: auto;">Google 登入</button>
+    </div>
+</div>
+
+<div id="history-sidebar">
+    <h4>我的成績</h4>
+    <div id="my-solves"></div>
+</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
-        authDomain: "weifengtimer-17ea9.firebaseapp.com",
-        projectId: "weifengtimer-17ea9",
-        storageBucket: "weifengtimer-17ea9.firebasestorage.app",
-        messagingSenderId: "852083740797",
-        appId: "1:852083740797:web:4b2326142554cf8654a114",
-        measurementId: "G-REE1EVZ4VJ"
-    };
-
+    const firebaseConfig = { /* 這裡貼上你的 Firebase Config */ };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
     let currentUser = null;
+    let myData = {};
 
-    // --- 設定面板邏輯 ---
-    const settingsPanel = document.getElementById('settings-panel');
-    document.getElementById('open-settings').onclick = () => settingsPanel.classList.add('open');
-    document.getElementById('close-settings').onclick = () => settingsPanel.classList.remove('open');
-
-    // 初始化顏色與套用
-    function applyColors(bg, accent) {
-        document.documentElement.style.setProperty('--bg', bg);
-        document.documentElement.style.setProperty('--accent', accent);
-        document.body.style.background = bg;
-        localStorage.setItem('wf-bg', bg);
-        localStorage.setItem('wf-accent', accent);
+    // --- 1. 核心計時邏輯 ---
+    // (此處保留之前的 handleDown/Up 邏輯，但在 stopTimer 時多做一個動作：更新好友看到的成績)
+    async function broadcastSolve(time) {
+        if (!currentUser) return;
+        const userRef = doc(db, "users", currentUser.uid);
+        await updateDoc(userRef, { 
+            lastSolve: time,
+            solves: arrayUnion({ time, id: Date.now() })
+        });
     }
 
-    applyColors(localStorage.getItem('wf-bg') || '#121212', localStorage.getItem('wf-accent') || '#3742fa');
-
-    // --- 儲存設定 (含 ID 重複檢查) ---
-    document.getElementById('save-settings').onclick = async () => {
-        if (!currentUser) return alert("請先登入！");
+    // --- 2. 好友與社交功能 ---
+    document.getElementById('add-friend-btn').onclick = async () => {
+        const targetID = document.getElementById('search-id').value.trim();
+        const q = query(collection(db, "users"), where("customID", "==", targetID));
+        const snap = await getDocs(q);
         
-        const newName = document.getElementById('name-input').value;
-        const newID = document.getElementById('id-input').value.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const bgColor = document.getElementById('bg-color-picker').value;
-        const accentColor = document.getElementById('accent-color-picker').value;
-
-        // 1. 檢查 ID 是否已被佔用
-        if (newID) {
-            const idQuery = query(collection(db, "users"), where("customID", "==", newID));
-            const querySnapshot = await getDocs(idQuery);
-            let isTaken = false;
-            querySnapshot.forEach((doc) => {
-                if (doc.id !== currentUser.uid) isTaken = true;
-            });
-
-            if (isTaken) {
-                document.getElementById('id-status').innerText = "❌ 此 ID 已被使用";
-                document.getElementById('id-status').style.color = "red";
-                return;
-            }
-        }
-
-        // 2. 儲存至雲端
-        await setDoc(doc(db, "users", currentUser.uid), {
-            displayName: newName || currentUser.displayName,
-            customID: newID,
-            themeBg: bgColor,
-            themeAccent: accentColor
-        }, { merge: true });
-
-        // 3. 套用設定
-        applyColors(bgColor, accentColor);
-        document.getElementById('display-name').innerText = newName;
-        document.getElementById('display-id').innerText = "#" + newID;
-        settingsPanel.classList.remove('open');
-        alert("設定已更新！");
+        if (snap.empty) return alert("找不到此 ID");
+        
+        const targetUID = snap.docs[0].id;
+        await updateDoc(doc(db, "users", currentUser.uid), {
+            friends: arrayUnion(targetUID)
+        });
+        alert("已加入好友！");
     };
 
-    // --- 帳號與初始化 ---
+    // 監聽好友動態
+    function listenToFriends(friendUIDs) {
+        if (!friendUIDs || friendUIDs.length === 0) return;
+        const q = query(collection(db, "users"), where("__name__", "in", friendUIDs));
+        onSnapshot(q, (snap) => {
+            const list = document.getElementById('friends-list');
+            list.innerHTML = "";
+            snap.forEach(doc => {
+                const data = doc.data();
+                list.innerHTML += `
+                    <div class="friend-item">
+                        <span>${data.displayName}</span>
+                        <span class="friend-solve">${data.lastSolve ? data.lastSolve.toFixed(3) : '--'}</span>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // --- 3. 聊天室邏輯 ---
+    document.getElementById('chat-input').onkeydown = async (e) => {
+        if (e.key === 'Enter' && currentUser) {
+            const msg = e.target.value;
+            await setDoc(doc(collection(db, "messages")), {
+                text: `${myData.customID}: ${msg}`,
+                time: Date.now()
+            });
+            e.target.value = "";
+        }
+    };
+
+    onSnapshot(query(collection(db, "messages")), (snap) => {
+        const chat = document.getElementById('chat-content');
+        chat.innerHTML = snap.docs.sort((a,b) => a.data().time - b.data().time)
+                         .map(d => `<div>${d.data().text}</div>`).join('');
+        chat.scrollTop = chat.scrollHeight;
+    });
+
+    // --- 4. 登入與初始化 ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
-            document.getElementById('login-btn').style.display = "none";
-            document.getElementById('logout-btn').style.display = "block";
-            
-            const docSnap = await getDoc(doc(db, "users", user.uid));
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                document.getElementById('display-name').innerText = data.displayName || user.displayName;
-                document.getElementById('display-id').innerText = "#" + (data.customID || "none");
-                document.getElementById('name-input').value = data.displayName || user.displayName;
-                document.getElementById('id-input').value = data.customID || "";
-                if(data.themeBg) applyColors(data.themeBg, data.themeAccent);
+            const userRef = doc(db, "users", user.uid);
+            const snap = await getDoc(userRef);
+            if (!snap.exists()) {
+                // 初次登入初始化
+                const newID = "user" + Math.floor(Math.random()*1000);
+                await setDoc(userRef, { displayName: user.displayName, customID: newID, friends: [], lastSolve: 0 });
             }
-        } else {
-            currentUser = null;
-            document.getElementById('login-btn').style.display = "block";
-            document.getElementById('logout-btn').style.display = "none";
+            myData = (await getDoc(userRef)).data();
+            document.getElementById('my-info').innerText = `${myData.displayName} (#${myData.customID})`;
+            listenToFriends(myData.friends);
         }
     });
 
     document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
-    document.getElementById('logout-btn').onclick = () => signOut(auth);
-
-    // [此處插入前幾版的計時器 Space 攔截與 Scramble 邏輯...]
-    // (為了長度簡略，此處功能與之前相同)
+    
+    // (其餘 Space 鍵計時邏輯請參考前一版並呼叫 broadcastSolve)
 </script>
 </body>
 </html>
