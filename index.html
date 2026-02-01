@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>WeiFeng Timer - Multi-Lang</title>
+<title>WeiFeng Timer - Professional</title>
 <style>
 :root {
 --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa;
@@ -51,7 +51,6 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 .side-tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.85rem; transition: 0.2s; position: relative; }
 .side-tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
 
-/* 指令1 & 2：點點樣式 */
 .blue-dot { width: 8px; height: 8px; background: #3742fa; border-radius: 50%; position: absolute; top: 8px; right: 8px; display: none; box-shadow: 0 0 5px #3742fa; }
 
 .request-input-group { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
@@ -99,7 +98,7 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
                         <input type="text" id="target-friend-id" placeholder="Ex: 123456">
                         <button class="btn" style="padding: 8px; margin-top: 5px;" id="send-request-btn" data-i18n="btn_confirm">確認</button>
                     </div>
-                    <div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">載入中...</div>
+                    <div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">無申請項目</div>
                 </div>
             </div>
         </div>
@@ -211,7 +210,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// --- 語言包 ---
 const i18n = {
 "zh-TW": {
 not_logged_in: "未登入", history: "歷史成績",
@@ -280,7 +278,7 @@ localStorage.setItem('wf_lang', currentLang);
 location.reload(); 
 };
 
-// --- 指令1：儲存設定 ---
+// --- Settings ---
 function loadSettings() {
     const inspection = localStorage.getItem('wf_inspection') || '0';
     const decimals = localStorage.getItem('wf_decimals') || '3';
@@ -294,7 +292,7 @@ document.getElementById('decimal-select').onchange = (e) => {
 };
 loadSettings();
 
-// --- 計時邏輯 ---
+// --- Timer Logic ---
 let currentUser = null, allData = {}, currentEvent = "333", currentScramble = "";
 let timerState = "IDLE", startTime, timerInterval, holdTimeout, insInterval;
 
@@ -337,7 +335,7 @@ currentScramble = (scramblers[currentEvent] || scramblers["333"])();
 document.getElementById('scramble').innerHTML = currentScramble;
 }
 
-// --- UI 控制 ---
+// --- UI Controls ---
 window.switchTab = (e, paneId) => {
 document.querySelectorAll('#modal-settings .tab-link, #modal-settings .tab-pane').forEach(el => el.classList.remove('active'));
 e.target.classList.add('active');
@@ -392,8 +390,9 @@ const lastN = solves.slice(0, n).map(s => {
 });
 const dnfCount = lastN.filter(t => t === Infinity).length;
 if (dnfCount > 1) return "DNF";
-const validTimes = lastN.filter(t => t !== Infinity);
-return (lastN.reduce((a,b)=> (a === Infinity || b === Infinity) ? Infinity : a+b, 0)/n).toFixed(3);
+const sum = lastN.reduce((a,b) => a + b, 0);
+if (sum === Infinity) return "DNF";
+return (sum/n).toFixed(3);
 };
 document.getElementById('ao5-val').innerText = avg(5);
 document.getElementById('ao12-val').innerText = avg(12);
@@ -468,216 +467,240 @@ window.onkeyup = handleUp;
 document.addEventListener('touchstart', handleDown, {passive: false});
 document.addEventListener('touchend', handleUp, {passive: false});
 
-// --- 好友與即時聊天系統 ---
+// --- Friends & Social 修復版本 ---
 let chatUnsubscribe = null;
 let currentChatUid = null;
-let unreadMap = {}; // 指令2：存儲未讀訊息
+let unreadMap = {};
 
+// 修復：渲染申請列表
 async function renderRequests(incoming) {
-const ui = document.getElementById('requests-list-ui');
-// 指令1：申請藍點
-document.getElementById('req-dot').style.display = (incoming && incoming.length > 0) ? 'block' : 'none';
+    const ui = document.getElementById('requests-list-ui');
+    document.getElementById('req-dot').style.display = (incoming && incoming.length > 0) ? 'block' : 'none';
 
-if(!incoming || incoming.length === 0) { ui.innerText = "尚無申請"; return; }
-ui.innerHTML = "";
-for(let uid of incoming) {
-const snap = await getDoc(doc(db, "users", uid));
-const d = snap.data();
-const div = document.createElement('div');
-div.className = "req-item";
-div.innerHTML = `<span>${d.displayName} (#${d.customID})</span>
-<div class="req-btns">
-<button class="mini-btn" style="background:var(--go)" onclick="handleFriend('${uid}', 'accept')">${i18n[currentLang].btn_accept}</button>
-<button class="mini-btn" style="background:var(--ready)" onclick="handleFriend('${uid}', 'reject')">${i18n[currentLang].btn_delete}</button>
-</div>`;
-ui.appendChild(div);
-}
-}
-
-async function renderFriends(friends) {
-const ui = document.getElementById('friends-list-ui');
-if(!friends || friends.length === 0) { ui.innerText = "尚無好友"; return; }
-ui.innerHTML = "";
-
-// 指令2：監聽每個好友是否有新訊息
-friends.forEach(uid => {
-    const chatId = [currentUser.uid, uid].sort().join("_");
-    const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "desc"), where("senderId", "==", uid));
-    onSnapshot(q, (snap) => {
-        if(!snap.empty){
-            const latest = snap.docs[0].data();
-            const lastViewed = localStorage.getItem(`viewed_${chatId}`) || 0;
-            if(latest.timestamp && latest.timestamp.toMillis() > lastViewed && currentChatUid !== uid) {
-                unreadMap[uid] = true;
+    if(!incoming || incoming.length === 0) { 
+        ui.innerText = "無申請項目"; 
+        return; 
+    }
+    
+    ui.innerHTML = "載入中..."; 
+    let html = "";
+    for(let uid of incoming) {
+        try {
+            const snap = await getDoc(doc(db, "users", uid));
+            if(snap.exists()) {
+                const d = snap.data();
+                html += `
+                <div class="req-item">
+                    <span>${d.displayName} (#${d.customID})</span>
+                    <div class="req-btns">
+                        <button class="mini-btn" style="background:var(--go)" onclick="handleFriend('${uid}', 'accept')">${i18n[currentLang].btn_accept}</button>
+                        <button class="mini-btn" style="background:var(--ready)" onclick="handleFriend('${uid}', 'reject')">${i18n[currentLang].btn_delete}</button>
+                    </div>
+                </div>`;
             }
-        }
-        updateFriendListUI(friends);
-    });
-});
+        } catch(e) { console.error("Request loading error", e); }
+    }
+    ui.innerHTML = html || "無申請項目";
 }
 
-// 指令2：更新好友列表及全局藍點
-async function updateFriendListUI(friends) {
+// 修復：渲染好友列表與未讀狀態
+async function renderFriends(friends) {
     const ui = document.getElementById('friends-list-ui');
-    ui.innerHTML = "";
-    let hasAnyUnread = false;
+    if(!friends || friends.length === 0) { 
+        ui.innerText = "尚無好友"; 
+        document.getElementById('msg-dot-global').style.display = 'none';
+        return; 
+    }
+
+    ui.innerHTML = "載入好友...";
+    let friendsData = [];
+    
+    // 獲取所有好友資料
     for(let uid of friends) {
-        const snap = await getDoc(doc(db, "users", uid));
-        const d = snap.data();
+        try {
+            const snap = await getDoc(doc(db, "users", uid));
+            if(snap.exists()) {
+                friendsData.push({ uid, ...snap.data() });
+            }
+        } catch(e) { console.error("Friend loading error", e); }
+    }
+
+    ui.innerHTML = "";
+    friendsData.forEach(f => {
         const div = document.createElement('div');
         div.className = "req-item";
-        div.onclick = () => openSidebarChat(uid, d.displayName);
-        const dotStyle = unreadMap[uid] ? 'display:block' : 'display:none';
-        if(unreadMap[uid]) hasAnyUnread = true;
-        div.innerHTML = `<span>${d.displayName}</span><span class="blue-dot" style="${dotStyle}"></span>`;
+        div.id = `friend-item-${f.uid}`;
+        div.onclick = () => openSidebarChat(f.uid, f.displayName);
+        
+        // 即時監聽該好友的未讀訊息
+        const chatId = [currentUser.uid, f.uid].sort().join("_");
+        const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "desc"), where("senderId", "==", f.uid), limit(1));
+        
+        onSnapshot(q, (snap) => {
+            if(!snap.empty){
+                const latest = snap.docs[0].data();
+                const lastViewed = localStorage.getItem(`viewed_${chatId}`) || 0;
+                if(latest.timestamp && latest.timestamp.toMillis() > lastViewed && currentChatUid !== f.uid) {
+                    unreadMap[f.uid] = true;
+                } else {
+                    unreadMap[f.uid] = false;
+                }
+            }
+            updateFriendUI(f.uid, f.displayName);
+        });
+
+        div.innerHTML = `<span>${f.displayName}</span><span class="blue-dot"></span>`;
         ui.appendChild(div);
+    });
+}
+
+function updateFriendUI(uid, name) {
+    const item = document.getElementById(`friend-item-${uid}`);
+    if(item) {
+        const dot = item.querySelector('.blue-dot');
+        dot.style.display = unreadMap[uid] ? 'block' : 'none';
     }
+    const hasAnyUnread = Object.values(unreadMap).some(v => v === true);
     document.getElementById('msg-dot-global').style.display = hasAnyUnread ? 'block' : 'none';
 }
 
 window.handleFriend = async (targetUid, action) => {
-const myRef = doc(db, "users", currentUser.uid);
-const targetRef = doc(db, "users", targetUid);
-if(action === 'accept') {
-await updateDoc(myRef, { friends: arrayUnion(targetUid), incomingRequests: arrayRemove(targetUid) });
-await updateDoc(targetRef, { friends: arrayUnion(currentUser.uid) });
-} else {
-await updateDoc(myRef, { incomingRequests: arrayRemove(targetUid) });
-}
+    const myRef = doc(db, "users", currentUser.uid);
+    const targetRef = doc(db, "users", targetUid);
+    if(action === 'accept') {
+        await updateDoc(myRef, { friends: arrayUnion(targetUid), incomingRequests: arrayRemove(targetUid) });
+        await updateDoc(targetRef, { friends: arrayUnion(currentUser.uid) });
+    } else {
+        await updateDoc(myRef, { incomingRequests: arrayRemove(targetUid) });
+    }
 };
 
 document.getElementById('send-request-btn').onclick = async () => {
-if(!currentUser) return;
-const targetID = document.getElementById('target-friend-id').value;
-const q = query(collection(db, "users"), where("customID", "==", targetID));
-const snap = await getDocs(q);
-if(snap.empty) return alert(i18n[currentLang].err_not_found);
-const targetDoc = snap.docs[0];
-if(targetDoc.id === currentUser.uid) return alert(i18n[currentLang].err_self);
-await updateDoc(doc(db, "users", targetDoc.id), { incomingRequests: arrayUnion(currentUser.uid) });
-alert(i18n[currentLang].msg_req_sent);
-document.getElementById('target-friend-id').value = "";
+    if(!currentUser) return;
+    const targetID = document.getElementById('target-friend-id').value.trim();
+    if(!targetID) return;
+    const q = query(collection(db, "users"), where("customID", "==", targetID));
+    const snap = await getDocs(q);
+    if(snap.empty) return alert(i18n[currentLang].err_not_found);
+    const targetDoc = snap.docs[0];
+    if(targetDoc.id === currentUser.uid) return alert(i18n[currentLang].err_self);
+    await updateDoc(doc(db, "users", targetDoc.id), { incomingRequests: arrayUnion(currentUser.uid) });
+    alert(i18n[currentLang].msg_req_sent);
+    document.getElementById('target-friend-id').value = "";
 };
 
 async function openSidebarChat(uid, name) {
-currentChatUid = uid;
-unreadMap[uid] = false; // 指令2：看過後點點消失
-const chatId = [currentUser.uid, uid].sort().join("_");
-localStorage.setItem(`viewed_${chatId}`, Date.now());
-
-document.getElementById('chat-title-name').innerText = name;
-document.getElementById('sidebar-friends-view').style.display = 'none';
-document.getElementById('sidebar-chat-view').classList.add('active');
-
-const chatRef = collection(db, "chats", chatId, "messages");
-const q = query(chatRef, orderBy("timestamp", "asc"));
-if(chatUnsubscribe) chatUnsubscribe();
-chatUnsubscribe = onSnapshot(q, (snapshot) => {
-    const container = document.getElementById('chat-msgs-container');
-    container.innerHTML = "";
-    snapshot.forEach(d => {
-        const msg = d.data();
-        const div = document.createElement('div');
-        div.className = `side-msg ${msg.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
-        div.innerText = msg.text;
-        container.appendChild(div);
-    });
-    container.scrollTop = container.scrollHeight;
+    currentChatUid = uid;
+    unreadMap[uid] = false;
+    const chatId = [currentUser.uid, uid].sort().join("_");
     localStorage.setItem(`viewed_${chatId}`, Date.now());
-});
+    updateFriendUI(uid, name);
+
+    document.getElementById('chat-title-name').innerText = name;
+    document.getElementById('sidebar-friends-view').style.display = 'none';
+    document.getElementById('sidebar-chat-view').classList.add('active');
+
+    const chatRef = collection(db, "chats", chatId, "messages");
+    const q = query(chatRef, orderBy("timestamp", "asc"));
+    if(chatUnsubscribe) chatUnsubscribe();
+    chatUnsubscribe = onSnapshot(q, (snapshot) => {
+        const container = document.getElementById('chat-msgs-container');
+        container.innerHTML = "";
+        snapshot.forEach(d => {
+            const msg = d.data();
+            const div = document.createElement('div');
+            div.className = `side-msg ${msg.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
+            div.innerText = msg.text;
+            container.appendChild(div);
+        });
+        container.scrollTop = container.scrollHeight;
+        localStorage.setItem(`viewed_${chatId}`, Date.now());
+    });
 }
 
 window.closeSidebarChat = () => {
-if(chatUnsubscribe) chatUnsubscribe();
-currentChatUid = null;
-document.getElementById('sidebar-chat-view').classList.remove('active');
-document.getElementById('sidebar-friends-view').style.display = 'flex';
-// 重新檢查全局點點
-let hasAnyUnread = Object.values(unreadMap).some(v => v === true);
-document.getElementById('msg-dot-global').style.display = hasAnyUnread ? 'block' : 'none';
+    if(chatUnsubscribe) chatUnsubscribe();
+    currentChatUid = null;
+    document.getElementById('sidebar-chat-view').classList.remove('active');
+    document.getElementById('sidebar-friends-view').style.display = 'flex';
 };
 
 document.getElementById('side-chat-send').onclick = sendChatMessage;
 document.getElementById('side-chat-input').onkeydown = (e) => { if(e.key==='Enter') sendChatMessage(); };
 
 async function sendChatMessage() {
-const input = document.getElementById('side-chat-input');
-const text = input.value.trim();
-if(!text || !currentChatUid) return;
-const chatId = [currentUser.uid, currentChatUid].sort().join("_");
-await addDoc(collection(db, "chats", chatId, "messages"), {
-    senderId: currentUser.uid,
-    text: text,
-    timestamp: serverTimestamp()
-});
-input.value = "";
+    const input = document.getElementById('side-chat-input');
+    const text = input.value.trim();
+    if(!text || !currentChatUid) return;
+    const chatId = [currentUser.uid, currentChatUid].sort().join("_");
+    await addDoc(collection(db, "chats", chatId, "messages"), {
+        senderId: currentUser.uid,
+        text: text,
+        timestamp: serverTimestamp()
+    });
+    input.value = "";
 }
 
-// --- Firebase 核心監聽 ---
+// --- Firebase Auth ---
 onAuthStateChanged(auth, async user => {
-if(user) {
-currentUser = user;
-document.getElementById('login-section').style.display = 'none';
-document.getElementById('profile-section').style.display = 'block';
-const userRef = doc(db, "users", user.uid);
-const snap = await getDoc(userRef);
-if(!snap.exists()){
-await setDoc(userRef, { displayName: user.displayName || "Cuber", customID: user.uid.slice(0, 6), allData: {}, idUpdates: [], friends: [], incomingRequests: [] });
-}
-onSnapshot(userRef, s => {
-if(s.exists()){
-const d = s.data();
-allData = d.allData || {};
-document.getElementById('display-name-sidebar').innerText = d.displayName;
-document.getElementById('display-id-sidebar').innerText = "#" + d.customID;
-document.getElementById('name-input').value = d.displayName;
-document.getElementById('id-input').value = d.customID;
-renderSolves();
-renderRequests(d.incomingRequests);
-renderFriends(d.friends);
-}
-});
-} else {
-currentUser = null;
-allData = {};
-document.getElementById('login-section').style.display = 'block';
-document.getElementById('profile-section').style.display = 'none';
-document.getElementById('display-name-sidebar').innerText = i18n[currentLang].not_logged_in;
-document.getElementById('display-id-sidebar').innerText = "#Guest";
-document.getElementById('solve-list-ui').innerHTML = "";
-document.getElementById('requests-list-ui').innerText = "請先登入";
-document.getElementById('friends-list-ui').innerText = "請先登入";
-renderSolves();
-}
+    if(user) {
+        currentUser = user;
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('profile-section').style.display = 'block';
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
+        if(!snap.exists()){
+            await setDoc(userRef, { displayName: user.displayName || "Cuber", customID: user.uid.slice(0, 6), allData: {}, idUpdates: [], friends: [], incomingRequests: [] });
+        }
+        onSnapshot(userRef, s => {
+            if(s.exists()){
+                const d = s.data();
+                allData = d.allData || {};
+                document.getElementById('display-name-sidebar').innerText = d.displayName;
+                document.getElementById('display-id-sidebar').innerText = "#" + (d.customID || "");
+                document.getElementById('name-input').value = d.displayName;
+                document.getElementById('id-input').value = d.customID;
+                renderSolves();
+                renderRequests(d.incomingRequests || []);
+                renderFriends(d.friends || []);
+            }
+        });
+    } else {
+        currentUser = null;
+        allData = {};
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('profile-section').style.display = 'none';
+        document.getElementById('display-name-sidebar').innerText = i18n[currentLang].not_logged_in;
+        document.getElementById('display-id-sidebar').innerText = "#Guest";
+        document.getElementById('solve-list-ui').innerHTML = "";
+        document.getElementById('requests-list-ui').innerText = "請先登入";
+        document.getElementById('friends-list-ui').innerText = "請先登入";
+        renderSolves();
+    }
 });
 
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>location.reload());
 
-// --- 指令3：名字跟ID不可空白 ---
 document.getElementById('save-profile').onclick = async () => {
-if(!currentUser) return;
-const newName = document.getElementById('name-input').value.trim();
-const newID = document.getElementById('id-input').value.trim();
+    if(!currentUser) return;
+    const newName = document.getElementById('name-input').value.trim();
+    const newID = document.getElementById('id-input').value.trim();
+    if(!newName || !newID) return alert(i18n[currentLang].err_empty);
 
-if(!newName || !newID) {
-    alert(i18n[currentLang].err_empty);
-    return;
-}
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+    const data = snap.data();
+    let updates = data.idUpdates || [];
+    const now = Date.now();
+    updates = updates.filter(t => now - t < 21 * 24 * 60 * 60 * 1000);
 
-const userRef = doc(db, "users", currentUser.uid);
-const snap = await getDoc(userRef);
-const data = snap.data();
-let updates = data.idUpdates || [];
-const now = Date.now();
-updates = updates.filter(t => now - t < 21 * 24 * 60 * 60 * 1000);
-
-if(data.customID !== newID){
-if(updates.length >= 2) return alert(i18n[currentLang].id_limit);
-updates.push(now);
-}
-await updateDoc(userRef, { displayName: newName, customID: newID, idUpdates: updates });
-alert(i18n[currentLang].save_success);
+    if(data.customID !== newID){
+        if(updates.length >= 2) return alert(i18n[currentLang].id_limit);
+        updates.push(now);
+    }
+    await updateDoc(userRef, { displayName: newName, customID: newID, idUpdates: updates });
+    alert(i18n[currentLang].save_success);
 };
 
 document.getElementById('event-selector').onchange = (e) => { currentEvent = e.target.value; generateScramble(); renderSolves(); };
