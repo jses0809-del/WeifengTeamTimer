@@ -176,10 +176,6 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 </div>
 
 <div id="tab-timer" class="tab-pane">
-<label data-i18n="label_start_method">開始方法</label>
-<select id="start-method">
-<option value="both" selected>兩者皆可 (空白鍵 + 觸控)</option>
-</select>
 <label data-i18n="label_inspection">15秒觀察</label>
 <select id="inspection-select">
 <option value="0" data-i18n="opt_off">關閉</option>
@@ -219,8 +215,7 @@ not_logged_in: "未登入", history: "歷史成績",
 tab_account: "帳號", tab_display: "顯示", tab_timer: "計時器",
 login_google: "使用 Google 登入", label_name: "名字", label_id: "ID",
 save_btn: "儲存修改", logout_btn: "登出帳號", label_theme: "主題",
-label_lang: "語言", label_start_method: "開始方法", opt_kb: "快捷鍵 (空白鍵)",
-opt_tc: "觸控開始", label_inspection: "15秒觀察", opt_off: "關閉",
+label_lang: "語言", label_inspection: "15秒觀察", opt_off: "關閉",
 opt_on: "開啟 (15s)", label_decimals: "小數點位數", del_confirm: "確定刪除？",
 save_success: "存檔成功", id_limit: "三週內只能修改兩次 ID！", msg_scramble: "打亂公式：\n",
 label_friends: "好友", label_requests: "申請", label_target_id: "對方ID", btn_confirm: "確認",
@@ -231,8 +226,7 @@ not_logged_in: "未登录", history: "历史成绩",
 tab_account: "账号", tab_display: "显示", tab_timer: "计时器",
 login_google: "使用 Google 登录", label_name: "名字", label_id: "ID",
 save_btn: "保存修改", logout_btn: "登出账号", label_theme: "主题",
-label_lang: "语言", label_start_method: "开始方法", opt_kb: "快捷键 (空格键)",
-opt_tc: "觸控开始", label_inspection: "15秒观察", opt_off: "关闭",
+label_lang: "语言", label_inspection: "15秒观察", opt_off: "关闭",
 opt_on: "开启 (15s)", label_decimals: "小数点位数", del_confirm: "确定删除？",
 save_success: "保存成功", id_limit: "三周内只能修改两次 ID！", msg_scramble: "打乱公式：\n",
 label_friends: "好友", label_requests: "申请", label_target_id: "對方ID", btn_confirm: "确认",
@@ -243,8 +237,7 @@ not_logged_in: "Guest", history: "History",
 tab_account: "Account", tab_display: "Display", tab_timer: "Timer",
 login_google: "Login with Google", label_name: "Name", label_id: "ID",
 save_btn: "Save Changes", logout_btn: "Logout", label_theme: "Theme",
-label_lang: "Language", label_start_method: "Start Method", opt_kb: "Keyboard (Space)",
-opt_tc: "Touch Start", label_inspection: "Inspection", opt_off: "OFF",
+label_lang: "Language", label_inspection: "Inspection", opt_off: "OFF",
 opt_on: "ON (15s)", label_decimals: "Decimals", del_confirm: "Are you sure?",
 save_success: "Saved!", id_limit: "ID can only be changed twice every 3 weeks!", msg_scramble: "Scramble:\n",
 label_friends: "Friends", label_requests: "Requests", label_target_id: "Target ID", btn_confirm: "Confirm",
@@ -255,8 +248,7 @@ not_logged_in: "未ログイン", history: "履歴",
 tab_account: "アカウント", tab_display: "表示", tab_timer: "タイマー",
 login_google: "Googleでログイン", label_name: "名前", label_id: "ID",
 save_btn: "変更を保存", logout_btn: "ログアウト", label_theme: "テーマ",
-label_lang: "言語", label_start_method: "開始方法", opt_kb: "キーボード (スペース)",
-opt_tc: "タッチ開始", label_inspection: "インスペクション", opt_off: "オフ",
+label_lang: "言語", label_inspection: "インスペクション", opt_off: "オフ",
 opt_on: "オン (15s)", label_decimals: "小数点以下", del_confirm: "削除しますか？",
 save_success: "保存しました", id_limit: "IDの変更は3週間に2回までです！", msg_scramble: "スクランブル：\n",
 label_friends: "フレンド", label_requests: "申請", label_target_id: "相手ID", btn_confirm: "確認",
@@ -272,14 +264,28 @@ document.querySelectorAll('[data-i18n]').forEach(el => {
 const key = el.getAttribute('data-i18n');
 if (langData[key]) el.innerText = langData[key];
 });
-localStorage.setItem('wf_lang', currentLang);
 }
 
 document.getElementById('lang-select').value = currentLang;
 document.getElementById('lang-select').onchange = (e) => {
 currentLang = e.target.value;
-updateLanguage();
+localStorage.setItem('wf_lang', currentLang);
+location.reload(); // 指令4：切換語言重新整理頁面
 };
+
+// --- 指令1：儲存設定 ---
+function loadSettings() {
+    const inspection = localStorage.getItem('wf_inspection') || '0';
+    const decimals = localStorage.getItem('wf_decimals') || '3';
+    document.getElementById('inspection-select').value = inspection;
+    document.getElementById('decimal-select').value = decimals;
+}
+document.getElementById('inspection-select').onchange = (e) => localStorage.setItem('wf_inspection', e.target.value);
+document.getElementById('decimal-select').onchange = (e) => {
+    localStorage.setItem('wf_decimals', e.target.value);
+    renderSolves();
+};
+loadSettings();
 
 // --- 計時邏輯 ---
 let currentUser = null, allData = {}, currentEvent = "333", currentScramble = "";
@@ -340,7 +346,6 @@ document.getElementById(paneId).classList.add('active');
 window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
 window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
 
-// 新增成績標記邏輯 (+2, DNF)
 window.togglePenalty = (e, idx, penalty) => {
     e.stopPropagation();
     const solve = allData[currentEvent][idx];
@@ -417,14 +422,11 @@ display.innerText = ((performance.now()-startTime)/1000).toFixed(document.getEle
 timerState = "RUNNING"; display.style.color = "var(--text)";
 }
 
-// 核心計時觸發邏輯 - 已修改為兩者皆可
+// 指令3：固定為兩者皆可
 function handleDown(e) {
     if(e.type === 'keydown' && e.code !== 'Space') return;
-    // 移除了對 start-method 的嚴格檢查，預設兩者皆可
     if(e.target.closest('#social-bar') || e.target.closest('.modal') || e.target.closest('select') || e.target.closest('.solve-item')) return;
-
     if(e.type === 'keydown') e.preventDefault();
-
     if(timerState === "RUNNING") {
         stopTimer();
     } else if(timerState === "IDLE") {
@@ -440,7 +442,6 @@ function handleDown(e) {
 
 function handleUp(e) {
     if(e.type === 'keyup' && e.code !== 'Space') return;
-    
     clearTimeout(holdTimeout);
     if(timerState === "GO") {
         const ins = document.getElementById('inspection-select').value;
@@ -483,6 +484,7 @@ ui.appendChild(div);
 }
 }
 
+// 指令2：好友只顯示名字
 async function renderFriends(friends) {
 const ui = document.getElementById('friends-list-ui');
 if(!friends || friends.length === 0) { ui.innerText = "尚無好友"; return; }
@@ -493,7 +495,7 @@ const d = snap.data();
 const div = document.createElement('div');
 div.className = "req-item";
 div.onclick = () => openSidebarChat(uid, d.displayName);
-div.innerHTML = `<span>${d.displayName} (#${d.customID})</span>`;
+div.innerHTML = `<span>${d.displayName}</span>`; // 僅顯示名字
 ui.appendChild(div);
 }
 }
@@ -527,11 +529,9 @@ currentChatUid = uid;
 document.getElementById('chat-title-name').innerText = name;
 document.getElementById('sidebar-friends-view').style.display = 'none';
 document.getElementById('sidebar-chat-view').classList.add('active');
-
 const chatId = [currentUser.uid, uid].sort().join("_");
 const chatRef = collection(db, "chats", chatId, "messages");
 const q = query(chatRef, orderBy("timestamp", "asc"));
-
 if(chatUnsubscribe) chatUnsubscribe();
 chatUnsubscribe = onSnapshot(q, (snapshot) => {
     const container = document.getElementById('chat-msgs-container');
@@ -561,7 +561,6 @@ async function sendChatMessage() {
 const input = document.getElementById('side-chat-input');
 const text = input.value.trim();
 if(!text || !currentChatUid) return;
-
 const chatId = [currentUser.uid, currentChatUid].sort().join("_");
 await addDoc(collection(db, "chats", chatId, "messages"), {
     senderId: currentUser.uid,
@@ -577,15 +576,11 @@ if(user) {
 currentUser = user;
 document.getElementById('login-section').style.display = 'none';
 document.getElementById('profile-section').style.display = 'block';
-document.getElementById('display-name-sidebar').innerText = user.displayName || "User";
-
 const userRef = doc(db, "users", user.uid);
 const snap = await getDoc(userRef);
-
 if(!snap.exists()){
 await setDoc(userRef, { displayName: user.displayName || "Cuber", customID: user.uid.slice(0, 6), allData: {}, idUpdates: [], friends: [], incomingRequests: [] });
 }
-
 onSnapshot(userRef, s => {
 if(s.exists()){
 const d = s.data();
