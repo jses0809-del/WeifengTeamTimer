@@ -48,12 +48,15 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
 
 .side-tab-nav { display: flex; border-bottom: 1px solid #333; margin-bottom: 10px; }
-.side-tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.85rem; transition: 0.2s; }
+.side-tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.85rem; transition: 0.2s; position: relative; }
 .side-tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
+
+/* 指令1 & 2：點點樣式 */
+.blue-dot { width: 8px; height: 8px; background: #3742fa; border-radius: 50%; position: absolute; top: 8px; right: 8px; display: none; box-shadow: 0 0 5px #3742fa; }
 
 .request-input-group { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
 .small-label { font-size: 0.75rem; color: var(--subtext); margin-bottom: 4px; display: block; }
-.req-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; }
+.req-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; position: relative; }
 .req-btns { display: flex; gap: 5px; }
 .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; border: none; color: white; }
 
@@ -83,8 +86,8 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
         </div>
         <div style="flex:1; overflow-y:auto; display: flex; flex-direction: column;">
             <div class="side-tab-nav">
-                <button class="side-tab-link active" onclick="switchSideTab(event, 'tab-friends')" data-i18n="label_friends">好友</button>
-                <button class="side-tab-link" onclick="switchSideTab(event, 'tab-requests')" data-i18n="label_requests">申請</button>
+                <button class="side-tab-link active" id="tab-friends-btn" onclick="switchSideTab(event, 'tab-friends')" data-i18n="label_friends">好友<span class="blue-dot" id="msg-dot-global"></span></button>
+                <button class="side-tab-link" id="tab-requests-btn" onclick="switchSideTab(event, 'tab-requests')" data-i18n="label_requests">申請<span class="blue-dot" id="req-dot"></span></button>
             </div>
             <div id="friend-section" style="padding: 10px; flex: 1;">
                 <div id="tab-friends" class="tab-pane active">
@@ -219,7 +222,8 @@ label_lang: "語言", label_inspection: "15秒觀察", opt_off: "關閉",
 opt_on: "開啟 (15s)", label_decimals: "小數點位數", del_confirm: "確定刪除？",
 save_success: "存檔成功", id_limit: "三週內只能修改兩次 ID！", msg_scramble: "打亂公式：\n",
 label_friends: "好友", label_requests: "申請", label_target_id: "對方ID", btn_confirm: "確認",
-err_not_found: "找不到該用戶", err_self: "不能加自己為好友", msg_req_sent: "申請已發送", btn_accept: "接受", btn_delete: "刪除"
+err_not_found: "找不到該用戶", err_self: "不能加自己為好友", msg_req_sent: "申請已發送", btn_accept: "接受", btn_delete: "刪除",
+err_empty: "欄位不可為空"
 },
 "zh-CN": {
 not_logged_in: "未登录", history: "历史成绩",
@@ -230,7 +234,8 @@ label_lang: "语言", label_inspection: "15秒观察", opt_off: "关闭",
 opt_on: "开启 (15s)", label_decimals: "小数点位数", del_confirm: "确定删除？",
 save_success: "保存成功", id_limit: "三周内只能修改两次 ID！", msg_scramble: "打乱公式：\n",
 label_friends: "好友", label_requests: "申请", label_target_id: "對方ID", btn_confirm: "确认",
-err_not_found: "找不到该用户", err_self: "不能加自己为好友", msg_req_sent: "申请已发送", btn_accept: "接受", btn_delete: "删除"
+err_not_found: "找不到该用户", err_self: "不能加自己为好友", msg_req_sent: "申请已发送", btn_accept: "接受", btn_delete: "删除",
+err_empty: "字段不能为空"
 },
 "en": {
 not_logged_in: "Guest", history: "History",
@@ -241,7 +246,8 @@ label_lang: "Language", label_inspection: "Inspection", opt_off: "OFF",
 opt_on: "ON (15s)", label_decimals: "Decimals", del_confirm: "Are you sure?",
 save_success: "Saved!", id_limit: "ID can only be changed twice every 3 weeks!", msg_scramble: "Scramble:\n",
 label_friends: "Friends", label_requests: "Requests", label_target_id: "Target ID", btn_confirm: "Confirm",
-err_not_found: "User not found", err_self: "Cannot add yourself", msg_req_sent: "Request sent", btn_accept: "Accept", btn_delete: "Delete"
+err_not_found: "User not found", err_self: "Cannot add yourself", msg_req_sent: "Request sent", btn_accept: "Accept", btn_delete: "Delete",
+err_empty: "Fields cannot be empty"
 },
 "ja": {
 not_logged_in: "未ログイン", history: "履歴",
@@ -252,7 +258,8 @@ label_lang: "言語", label_inspection: "インスペクション", opt_off: "�
 opt_on: "オン (15s)", label_decimals: "小数点以下", del_confirm: "削除しますか？",
 save_success: "保存しました", id_limit: "IDの変更は3週間に2回までです！", msg_scramble: "スクランブル：\n",
 label_friends: "フレンド", label_requests: "申請", label_target_id: "相手ID", btn_confirm: "確認",
-err_not_found: "ユーザーが見つかりません", err_self: "自分は追加できません", msg_req_sent: "申請を送りました", btn_accept: "承認", btn_delete: "削除"
+err_not_found: "ユーザーが見つかりません", err_self: "自分は追加できません", msg_req_sent: "申請を送りました", btn_accept: "承認", btn_delete: "削除",
+err_empty: "入力必須です"
 }
 };
 
@@ -270,7 +277,7 @@ document.getElementById('lang-select').value = currentLang;
 document.getElementById('lang-select').onchange = (e) => {
 currentLang = e.target.value;
 localStorage.setItem('wf_lang', currentLang);
-location.reload(); // 指令4：切換語言重新整理頁面
+location.reload(); 
 };
 
 // --- 指令1：儲存設定 ---
@@ -422,7 +429,6 @@ display.innerText = ((performance.now()-startTime)/1000).toFixed(document.getEle
 timerState = "RUNNING"; display.style.color = "var(--text)";
 }
 
-// 指令3：固定為兩者皆可
 function handleDown(e) {
     if(e.type === 'keydown' && e.code !== 'Space') return;
     if(e.target.closest('#social-bar') || e.target.closest('.modal') || e.target.closest('select') || e.target.closest('.solve-item')) return;
@@ -465,9 +471,13 @@ document.addEventListener('touchend', handleUp, {passive: false});
 // --- 好友與即時聊天系統 ---
 let chatUnsubscribe = null;
 let currentChatUid = null;
+let unreadMap = {}; // 指令2：存儲未讀訊息
 
 async function renderRequests(incoming) {
 const ui = document.getElementById('requests-list-ui');
+// 指令1：申請藍點
+document.getElementById('req-dot').style.display = (incoming && incoming.length > 0) ? 'block' : 'none';
+
 if(!incoming || incoming.length === 0) { ui.innerText = "尚無申請"; return; }
 ui.innerHTML = "";
 for(let uid of incoming) {
@@ -484,20 +494,45 @@ ui.appendChild(div);
 }
 }
 
-// 指令2：好友只顯示名字
 async function renderFriends(friends) {
 const ui = document.getElementById('friends-list-ui');
 if(!friends || friends.length === 0) { ui.innerText = "尚無好友"; return; }
 ui.innerHTML = "";
-for(let uid of friends) {
-const snap = await getDoc(doc(db, "users", uid));
-const d = snap.data();
-const div = document.createElement('div');
-div.className = "req-item";
-div.onclick = () => openSidebarChat(uid, d.displayName);
-div.innerHTML = `<span>${d.displayName}</span>`; // 僅顯示名字
-ui.appendChild(div);
+
+// 指令2：監聽每個好友是否有新訊息
+friends.forEach(uid => {
+    const chatId = [currentUser.uid, uid].sort().join("_");
+    const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "desc"), where("senderId", "==", uid));
+    onSnapshot(q, (snap) => {
+        if(!snap.empty){
+            const latest = snap.docs[0].data();
+            const lastViewed = localStorage.getItem(`viewed_${chatId}`) || 0;
+            if(latest.timestamp && latest.timestamp.toMillis() > lastViewed && currentChatUid !== uid) {
+                unreadMap[uid] = true;
+            }
+        }
+        updateFriendListUI(friends);
+    });
+});
 }
+
+// 指令2：更新好友列表及全局藍點
+async function updateFriendListUI(friends) {
+    const ui = document.getElementById('friends-list-ui');
+    ui.innerHTML = "";
+    let hasAnyUnread = false;
+    for(let uid of friends) {
+        const snap = await getDoc(doc(db, "users", uid));
+        const d = snap.data();
+        const div = document.createElement('div');
+        div.className = "req-item";
+        div.onclick = () => openSidebarChat(uid, d.displayName);
+        const dotStyle = unreadMap[uid] ? 'display:block' : 'display:none';
+        if(unreadMap[uid]) hasAnyUnread = true;
+        div.innerHTML = `<span>${d.displayName}</span><span class="blue-dot" style="${dotStyle}"></span>`;
+        ui.appendChild(div);
+    }
+    document.getElementById('msg-dot-global').style.display = hasAnyUnread ? 'block' : 'none';
 }
 
 window.handleFriend = async (targetUid, action) => {
@@ -526,10 +561,14 @@ document.getElementById('target-friend-id').value = "";
 
 async function openSidebarChat(uid, name) {
 currentChatUid = uid;
+unreadMap[uid] = false; // 指令2：看過後點點消失
+const chatId = [currentUser.uid, uid].sort().join("_");
+localStorage.setItem(`viewed_${chatId}`, Date.now());
+
 document.getElementById('chat-title-name').innerText = name;
 document.getElementById('sidebar-friends-view').style.display = 'none';
 document.getElementById('sidebar-chat-view').classList.add('active');
-const chatId = [currentUser.uid, uid].sort().join("_");
+
 const chatRef = collection(db, "chats", chatId, "messages");
 const q = query(chatRef, orderBy("timestamp", "asc"));
 if(chatUnsubscribe) chatUnsubscribe();
@@ -544,6 +583,7 @@ chatUnsubscribe = onSnapshot(q, (snapshot) => {
         container.appendChild(div);
     });
     container.scrollTop = container.scrollHeight;
+    localStorage.setItem(`viewed_${chatId}`, Date.now());
 });
 }
 
@@ -552,6 +592,9 @@ if(chatUnsubscribe) chatUnsubscribe();
 currentChatUid = null;
 document.getElementById('sidebar-chat-view').classList.remove('active');
 document.getElementById('sidebar-friends-view').style.display = 'flex';
+// 重新檢查全局點點
+let hasAnyUnread = Object.values(unreadMap).some(v => v === true);
+document.getElementById('msg-dot-global').style.display = hasAnyUnread ? 'block' : 'none';
 };
 
 document.getElementById('side-chat-send').onclick = sendChatMessage;
@@ -611,20 +654,29 @@ renderSolves();
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>location.reload());
 
+// --- 指令3：名字跟ID不可空白 ---
 document.getElementById('save-profile').onclick = async () => {
 if(!currentUser) return;
+const newName = document.getElementById('name-input').value.trim();
+const newID = document.getElementById('id-input').value.trim();
+
+if(!newName || !newID) {
+    alert(i18n[currentLang].err_empty);
+    return;
+}
+
 const userRef = doc(db, "users", currentUser.uid);
 const snap = await getDoc(userRef);
 const data = snap.data();
 let updates = data.idUpdates || [];
 const now = Date.now();
 updates = updates.filter(t => now - t < 21 * 24 * 60 * 60 * 1000);
-const newID = document.getElementById('id-input').value;
+
 if(data.customID !== newID){
 if(updates.length >= 2) return alert(i18n[currentLang].id_limit);
 updates.push(now);
 }
-await updateDoc(userRef, { displayName: document.getElementById('name-input').value, customID: newID, idUpdates: updates });
+await updateDoc(userRef, { displayName: newName, customID: newID, idUpdates: updates });
 alert(i18n[currentLang].save_success);
 };
 
