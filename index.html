@@ -26,7 +26,11 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-
 #timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
 #history-panel { width: 250px; background: rgba(0,0,0,0.1); padding: 15px; border-left: 1px solid #333; overflow-y: auto; }
-.solve-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #444; cursor: pointer; }
+.solve-item { display: flex; flex-direction: column; padding: 10px; border-bottom: 1px solid #444; cursor: pointer; }
+.solve-main { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.solve-ops { display: flex; gap: 5px; margin-top: 5px; }
+.op-btn { font-size: 0.7rem; padding: 2px 5px; border-radius: 3px; border: 1px solid #555; background: none; color: var(--subtext); cursor: pointer; }
+.op-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 .del-btn { color: #ff4757; font-weight: bold; padding: 5px; }
 
 .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 15px; z-index: 3000; display: none; width: 380px; box-shadow: 0 0 50px #000; }
@@ -174,8 +178,7 @@ input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px sol
 <div id="tab-timer" class="tab-pane">
 <label data-i18n="label_start_method">開始方法</label>
 <select id="start-method">
-<option value="kb" data-i18n="opt_kb">快捷鍵 (空白鍵)</option>
-<option value="tc" data-i18n="opt_tc">觸控開始</option>
+<option value="both" selected>兩者皆可 (空白鍵 + 觸控)</option>
 </select>
 <label data-i18n="label_inspection">15秒觀察</label>
 <select id="inspection-select">
@@ -337,20 +340,48 @@ document.getElementById(paneId).classList.add('active');
 window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
 window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
 
+// 新增成績標記邏輯 (+2, DNF)
+window.togglePenalty = (e, idx, penalty) => {
+    e.stopPropagation();
+    const solve = allData[currentEvent][idx];
+    if (penalty === 'plus2') {
+        solve.plus2 = !solve.plus2;
+    } else if (penalty === 'dnf') {
+        solve.dnf = !solve.dnf;
+    }
+    renderSolves();
+    if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
+};
+
 function renderSolves() {
 const solves = allData[currentEvent] || [];
 const dec = document.getElementById('decimal-select').value;
-document.getElementById('solve-list-ui').innerHTML = solves.map((s, idx) => `
-<div class="solve-item" onclick="alert('${i18n[currentLang].msg_scramble}'+'${s.scramble.replace(/<br>/g, '\\n') || 'N/A'}')">
-<b>${s.time.toFixed(dec)}s</b>
-<span class="del-btn" onclick="deleteSolve(event, ${idx})">✕</span>
-</div>
-`).join('');
+document.getElementById('solve-list-ui').innerHTML = solves.map((s, idx) => {
+    let displayTime = s.dnf ? "DNF" : (s.plus2 ? (s.time + 2).toFixed(dec) + "+" : s.time.toFixed(dec));
+    return `
+    <div class="solve-item" onclick="alert('${i18n[currentLang].msg_scramble}'+'${(s.scramble || '').replace(/<br>/g, '\\n') || 'N/A'}')">
+        <div class="solve-main">
+            <b style="${s.dnf ? 'text-decoration:line-through; color:#888;' : ''}">${displayTime}</b>
+            <span class="del-btn" onclick="deleteSolve(event, ${idx})">✕</span>
+        </div>
+        <div class="solve-ops">
+            <button class="op-btn ${s.plus2?'active':''}" onclick="togglePenalty(event, ${idx}, 'plus2')">+2</button>
+            <button class="op-btn ${s.dnf?'active':''}" onclick="togglePenalty(event, ${idx}, 'dnf')">DNF</button>
+        </div>
+    </div>
+    `;
+}).join('');
 
 const avg = (n) => {
 if(solves.length < n) return "--";
-const lastN = solves.slice(0, n).map(s => s.time);
-return (lastN.reduce((a,b)=>a+b, 0)/n).toFixed(3);
+const lastN = solves.slice(0, n).map(s => {
+    if (s.dnf) return Infinity;
+    return s.plus2 ? s.time + 2 : s.time;
+});
+const dnfCount = lastN.filter(t => t === Infinity).length;
+if (dnfCount > 1) return "DNF";
+const validTimes = lastN.filter(t => t !== Infinity);
+return (lastN.reduce((a,b)=> (a === Infinity || b === Infinity) ? Infinity : a+b, 0)/n).toFixed(3);
 };
 document.getElementById('ao5-val').innerText = avg(5);
 document.getElementById('ao12-val').innerText = avg(12);
@@ -371,7 +402,7 @@ function stopTimer() {
 clearInterval(timerInterval); timerState = "IDLE";
 const time = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
 if(!allData[currentEvent]) allData[currentEvent] = [];
-allData[currentEvent].unshift({ time, id: Date.now(), scramble: currentScramble });
+allData[currentEvent].unshift({ time, id: Date.now(), scramble: currentScramble, plus2: false, dnf: false });
 renderSolves(); generateScramble();
 if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
 display.style.color = "var(--text)";
@@ -386,11 +417,11 @@ display.innerText = ((performance.now()-startTime)/1000).toFixed(document.getEle
 timerState = "RUNNING"; display.style.color = "var(--text)";
 }
 
-// 核心計時觸發邏輯
+// 核心計時觸發邏輯 - 已修改為兩者皆可
 function handleDown(e) {
     if(e.type === 'keydown' && e.code !== 'Space') return;
-    if(e.type === 'touchstart' && document.getElementById('start-method').value !== 'tc') return;
-    if(e.target.closest('#social-bar') || e.target.closest('.modal') || e.target.closest('select')) return;
+    // 移除了對 start-method 的嚴格檢查，預設兩者皆可
+    if(e.target.closest('#social-bar') || e.target.closest('.modal') || e.target.closest('select') || e.target.closest('.solve-item')) return;
 
     if(e.type === 'keydown') e.preventDefault();
 
@@ -409,7 +440,6 @@ function handleDown(e) {
 
 function handleUp(e) {
     if(e.type === 'keyup' && e.code !== 'Space') return;
-    if(e.type === 'touchend' && document.getElementById('start-method').value !== 'tc') return;
     
     clearTimeout(holdTimeout);
     if(timerState === "GO") {
