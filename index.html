@@ -2,167 +2,613 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>WeiFeng Timer</title>
-
+<title>WeiFeng Timer - Multi-Lang</title>
 <style>
-:root{
---bg:#121212;--panel:#1e1e1e;--text:#fff;--accent:#3742fa;
---ready:#ff4757;--go:#2ed573;--subtext:#888;
+:root {
+--bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa;
+--ready: #ff4757; --go: #2ed573; --subtext: #888;
 }
-body{margin:0;height:100vh;display:flex;background:var(--bg);color:var(--text);font-family:Segoe UI}
-#social-bar{width:300px;background:var(--panel);display:flex;flex-direction:column}
-.req-item{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;background:rgba(255,255,255,.05);margin-bottom:6px}
-.friend-name{cursor:pointer}
-.friend-menu{position:relative}
-.menu-btn{background:none;border:none;color:#aaa;font-size:18px;cursor:pointer}
-.menu-list{position:absolute;right:0;top:22px;background:#222;border-radius:6px;display:none;flex-direction:column;z-index:99}
-.menu-list button{background:none;border:none;color:#fff;padding:6px 10px;text-align:left;cursor:pointer}
-.menu-list button:hover{background:#333}
-.menu-list.show{display:flex}
+body.dark-theme { --bg: #121212; --panel: #1e1e1e; --text: #fff; --accent: #3742fa; }
+body.light-theme { --bg: #f5f5f5; --panel: #ffffff; --text: #333; --accent: #007bff; }
+body.cyber-theme { --bg: #0d0221; --panel: #261447; --text: #ff0055; --accent: #00f2ff; }
+body.sakura-theme { --bg: #fff5f8; --panel: #ffe0e9; --text: #d4418e; --accent: #ff85a2; }
+body.gold-theme { --bg: #1a1a1a; --panel: #2c2c2c; --text: #d4af37; --accent: #ffd700; }
 
-#sidebar-chat-view{display:none;flex-direction:column;height:100%}
-#chat-msgs-container{flex:1;overflow-y:auto;padding:10px}
-.side-msg{max-width:75%;padding:6px 10px;border-radius:8px;margin-bottom:6px}
-.mine{align-self:flex-end;background:var(--accent)}
-.theirs{align-self:flex-start;background:#333}
-.chat-input-row{display:flex;padding:8px;border-top:1px solid #333}
-.chat-input-row input{flex:1;padding:8px;border-radius:6px;border:none}
-.chat-input-row button{margin-left:6px}
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; user-select: none; }
+
+#social-bar { width: 300px; background: var(--panel); border-right: 1px solid #333; display: flex; flex-direction: column; transition: 0.3s; z-index: 1000; position: relative; }
+#social-bar.collapsed { transform: translateX(-300px); position: absolute; height: 100%; }
+.nav-header { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.1); }
+.icon-btn { font-size: 20px; cursor: pointer; background: #333; border: none; color: white; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+
+#main-stage { flex: 1; display: flex; flex-direction: column; position: relative; text-align: center; }
+#scramble { padding: 25px; font-size: 1.1rem; min-height: 70px; color: var(--subtext); line-height: 1.4; white-space: normal; word-break: break-word; }
+#timer-display { font-size: 15vw; font-weight: bold; margin: auto; font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+#history-panel { width: 250px; background: rgba(0,0,0,0.1); padding: 15px; border-left: 1px solid #333; overflow-y: auto; }
+.solve-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #444; cursor: pointer; }
+.del-btn { color: #ff4757; font-weight: bold; padding: 5px; }
+
+.modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); padding: 25px; border-radius: 15px; z-index: 3000; display: none; width: 380px; box-shadow: 0 0 50px #000; }
+.modal.active { display: block; }
+.overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2500; display:none; }
+.overlay.active { display:block; }
+
+.tab-nav { display: flex; border-bottom: 1px solid #444; margin-bottom: 15px; }
+.tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.9rem; }
+.tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+input, select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 6px; margin: 8px 0; box-sizing: border-box; }
+.btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+
+.side-tab-nav { display: flex; border-bottom: 1px solid #333; margin-bottom: 10px; }
+.side-tab-link { flex:1; padding:10px; background:none; border:none; color:var(--subtext); cursor:pointer; font-weight:bold; font-size: 0.85rem; transition: 0.2s; }
+.side-tab-link.active { color:var(--accent); border-bottom: 2px solid var(--accent); }
+
+.request-input-group { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
+.small-label { font-size: 0.75rem; color: var(--subtext); margin-bottom: 4px; display: block; }
+.req-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 5px; cursor: pointer; }
+.req-btns { display: flex; gap: 5px; }
+.mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; border: none; color: white; }
+
+#sidebar-chat-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel); display: none; flex-direction: column; z-index: 10; }
+#sidebar-chat-view.active { display: flex; }
+#chat-back-btn { padding: 15px; cursor: pointer; background: rgba(0,0,0,0.2); border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
+#chat-msgs-container { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.side-msg { max-width: 85%; padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; line-height: 1.3; }
+.side-msg.mine { align-self: flex-end; background: var(--accent); color: #fff; }
+.side-msg.theirs { align-self: flex-start; background: #333; color: #fff; }
+.chat-input-row { padding: 10px; display: flex; gap: 5px; border-top: 1px solid #333; }
 </style>
 </head>
+<body class="dark-theme">
 
-<body>
+<div class="overlay" id="modal-overlay" onclick="closeAllModals()"></div>
 
 <div id="social-bar">
-<div id="sidebar-friends-view">
-<div style="padding:10px;font-weight:bold">好友</div>
-<div id="friends-list-ui"></div>
+    <div id="sidebar-friends-view" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="nav-header">
+            <button class="icon-btn" id="hide-sidebar-btn">☰</button>
+            <button class="icon-btn" onclick="openModal('modal-settings')">⚙️</button>
+        </div>
+        <div id="user-info-card" style="padding: 15px; border-bottom: 1px solid #333;">
+            <div id="display-name-sidebar" data-i18n="not_logged_in">未登入</div>
+            <div id="display-id-sidebar" style="font-size:0.8rem; color:var(--accent);">#Guest</div>
+        </div>
+        <div style="flex:1; overflow-y:auto; display: flex; flex-direction: column;">
+            <div class="side-tab-nav">
+                <button class="side-tab-link active" onclick="switchSideTab(event, 'tab-friends')" data-i18n="label_friends">好友</button>
+                <button class="side-tab-link" onclick="switchSideTab(event, 'tab-requests')" data-i18n="label_requests">申請</button>
+            </div>
+            <div id="friend-section" style="padding: 10px; flex: 1;">
+                <div id="tab-friends" class="tab-pane active">
+                    <div id="friends-list-ui" style="color: var(--subtext); font-size: 0.9rem;">尚無好友</div>
+                </div>
+                <div id="tab-requests" class="tab-pane">
+                    <div class="request-input-group">
+                        <span class="small-label" data-i18n="label_target_id">對方ID</span>
+                        <input type="text" id="target-friend-id" placeholder="Ex: 123456">
+                        <button class="btn" style="padding: 8px; margin-top: 5px;" id="send-request-btn" data-i18n="btn_confirm">確認</button>
+                    </div>
+                    <div id="requests-list-ui" style="color: var(--subtext); font-size: 0.9rem;">載入中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar-chat-view">
+        <div id="chat-back-btn" onclick="closeSidebarChat()">
+            <span>⬅</span> <span id="chat-title-name">Chat</span>
+        </div>
+        <div id="chat-msgs-container"></div>
+        <div class="chat-input-row">
+            <input type="text" id="side-chat-input" placeholder="Aa" style="margin:0;">
+            <button class="mini-btn" id="side-chat-send" style="background:var(--accent); width:50px;">➤</button>
+        </div>
+    </div>
 </div>
 
-<div id="sidebar-chat-view">
-<div style="padding:10px;border-bottom:1px solid #333;cursor:pointer" onclick="closeChat()">⬅ 返回</div>
-<div id="chat-msgs-container"></div>
-<div class="chat-input-row">
-<input id="chat-input" placeholder="輸入訊息…">
-<button onclick="sendMsg()">送出</button>
+<div id="main-stage">
+<button class="icon-btn" id="show-sidebar-btn" style="position:absolute; left:15px; top:15px; display:none;">☰</button>
+<div id="top-area" style="padding:20px;">
+<select id="event-selector" style="width: auto; background: var(--accent);">
+<option value="333">3x3x3</option>
+<option value="222">2x2x2</option>
+<option value="444">4x4x4</option>
+<option value="pyram">Pyraminx</option>
+<option value="minx">Megaminx</option>
+</select>
+<div id="scramble">Loading...</div>
 </div>
+<div id="timer-display">0.000</div>
+<div id="stats-bar" style="margin-bottom:20px; display:flex; justify-content:center; gap:30px; font-size:1.2rem;">
+<div>AO5: <b id="ao5-val">--</b></div>
+<div>AO12: <b id="ao12-val">--</b></div>
 </div>
 </div>
 
-<div style="flex:1;display:flex;align-items:center;justify-content:center">
-<h1>Timer 主畫面（略）</h1>
+<div id="history-panel">
+<div style="font-weight:bold; margin-bottom:10px;" data-i18n="history">歷史成績</div>
+<div id="solve-list-ui"></div>
+</div>
+
+<div class="modal" id="modal-settings">
+<div class="tab-nav">
+<button class="tab-link active" onclick="switchTab(event, 'tab-account')" data-i18n="tab_account">帳號</button>
+<button class="tab-link" onclick="switchTab(event, 'tab-display')" data-i18n="tab_display">顯示</button>
+<button class="tab-link" onclick="switchTab(event, 'tab-timer')" data-i18n="tab_timer">計時器</button>
+</div>
+
+<div id="tab-account" class="tab-pane active">
+<div id="login-section">
+<button class="btn" id="login-btn" data-i18n="login_google">使用 Google 登入</button>
+</div>
+<div id="profile-section" style="display:none;">
+<label data-i18n="label_name">名字</label><input type="text" id="name-input">
+<label data-i18n="label_id">ID</label><input type="text" id="id-input">
+<button class="btn" id="save-profile" data-i18n="save_btn">儲存修改</button>
+<button class="btn" id="logout-btn" style="background:#444; margin-top:20px;" data-i18n="logout_btn">登出帳號</button>
+</div>
+</div>
+
+<div id="tab-display" class="tab-pane">
+<label data-i18n="label_theme">主題</label>
+<select id="theme-select" onchange="document.body.className=this.value+'-theme'">
+<option value="dark">Dark</option>
+<option value="light">Light</option>
+<option value="cyber">Cyberpunk</option>
+<option value="sakura">Sakura</option>
+<option value="gold">Gold</option>
+</select>
+<label data-i18n="label_lang">語言</label>
+<select id="lang-select">
+<option value="zh-TW">繁體中文</option>
+<option value="zh-CN">简体中文</option>
+<option value="en">English</option>
+<option value="ja">日本語</option>
+</select>
+</div>
+
+<div id="tab-timer" class="tab-pane">
+<label data-i18n="label_start_method">開始方法</label>
+<select id="start-method">
+<option value="kb" data-i18n="opt_kb">快捷鍵 (空白鍵)</option>
+<option value="tc" data-i18n="opt_tc">觸控開始</option>
+</select>
+<label data-i18n="label_inspection">15秒觀察</label>
+<select id="inspection-select">
+<option value="0" data-i18n="opt_off">關閉</option>
+<option value="15" data-i18n="opt_on">開啟 (15s)</option>
+</select>
+<label data-i18n="label_decimals">小數點位數</label>
+<select id="decimal-select">
+<option value="2">2 位</option>
+<option value="3" selected>3 位</option>
+</select>
+</div>
 </div>
 
 <script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import{getFirestore,doc,setDoc,getDoc,updateDoc,collection,addDoc,onSnapshot,deleteDoc,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, getDocs, arrayUnion, arrayRemove, addDoc, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const app=initializeApp({
-apiKey:"AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
-authDomain:"weifengtimer-17ea9.firebaseapp.com",
-projectId:"weifengtimer-17ea9"
-});
-const db=getFirestore(app);
-const auth=getAuth(app);
-
-let me=null,currentChat=null,unsub=null;
-
-onAuthStateChanged(auth,async u=>{
-if(!u)return;
-me=u;
-const ref=doc(db,"users",u.uid);
-if(!(await getDoc(ref)).exists()){
-await setDoc(ref,{friends:[],friendsPinned:[],blockedUsers:[]});
-}
-onSnapshot(ref,s=>renderFriends(s.data()));
-});
-
-async function renderFriends(d){
-const ui=document.getElementById("friends-list-ui");
-ui.innerHTML="";
-const list=[...(d.friendsPinned||[]),...(d.friends||[])];
-for(const uid of new Set(list)){
-if((d.blockedUsers||[]).includes(uid))continue;
-const u=await getDoc(doc(db,"users",uid));
-const div=document.createElement("div");
-div.className="req-item";
-div.innerHTML=`
-<span class="friend-name">${u.data().displayName}</span>
-<div class="friend-menu">
-<button class="menu-btn">⋮</button>
-<div class="menu-list">
-<button onclick="pinFriend('${uid}')">釘選</button>
-<button onclick="removeFriend('${uid}')">刪除</button>
-<button onclick="blockFriend('${uid}')">封鎖</button>
-</div>
-</div>`;
-div.querySelector(".friend-name").onclick=()=>openChat(uid,u.data().displayName);
-div.querySelector(".menu-btn").onclick=e=>{
-e.stopPropagation();
-div.querySelector(".menu-list").classList.toggle("show");
+const firebaseConfig = {
+apiKey: "AIzaSyCIzFMV4CKWBSCHNGOgC1hbzjRpQ-UaQ7s",
+authDomain: "weifengtimer-17ea9.firebaseapp.com",
+projectId: "weifengtimer-17ea9",
+storageBucket: "weifengtimer-17ea9.firebasestorage.app",
+messagingSenderId: "852083740797",
+appId: "1:852083740797:web:4b2326142554cf8654a114"
 };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// --- 語言包 ---
+const i18n = {
+"zh-TW": {
+not_logged_in: "未登入", history: "歷史成績",
+tab_account: "帳號", tab_display: "顯示", tab_timer: "計時器",
+login_google: "使用 Google 登入", label_name: "名字", label_id: "ID",
+save_btn: "儲存修改", logout_btn: "登出帳號", label_theme: "主題",
+label_lang: "語言", label_start_method: "開始方法", opt_kb: "快捷鍵 (空白鍵)",
+opt_tc: "觸控開始", label_inspection: "15秒觀察", opt_off: "關閉",
+opt_on: "開啟 (15s)", label_decimals: "小數點位數", del_confirm: "確定刪除？",
+save_success: "存檔成功", id_limit: "三週內只能修改兩次 ID！", msg_scramble: "打亂公式：\n",
+label_friends: "好友", label_requests: "申請", label_target_id: "對方ID", btn_confirm: "確認",
+err_not_found: "找不到該用戶", err_self: "不能加自己為好友", msg_req_sent: "申請已發送", btn_accept: "接受", btn_delete: "刪除"
+},
+"zh-CN": {
+not_logged_in: "未登录", history: "历史成绩",
+tab_account: "账号", tab_display: "显示", tab_timer: "计时器",
+login_google: "使用 Google 登录", label_name: "名字", label_id: "ID",
+save_btn: "保存修改", logout_btn: "登出账号", label_theme: "主题",
+label_lang: "语言", label_start_method: "开始方法", opt_kb: "快捷键 (空格键)",
+opt_tc: "觸控开始", label_inspection: "15秒观察", opt_off: "关闭",
+opt_on: "开启 (15s)", label_decimals: "小数点位数", del_confirm: "确定删除？",
+save_success: "保存成功", id_limit: "三周内只能修改两次 ID！", msg_scramble: "打乱公式：\n",
+label_friends: "好友", label_requests: "申请", label_target_id: "對方ID", btn_confirm: "确认",
+err_not_found: "找不到该用户", err_self: "不能加自己为好友", msg_req_sent: "申请已发送", btn_accept: "接受", btn_delete: "删除"
+},
+"en": {
+not_logged_in: "Guest", history: "History",
+tab_account: "Account", tab_display: "Display", tab_timer: "Timer",
+login_google: "Login with Google", label_name: "Name", label_id: "ID",
+save_btn: "Save Changes", logout_btn: "Logout", label_theme: "Theme",
+label_lang: "Language", label_start_method: "Start Method", opt_kb: "Keyboard (Space)",
+opt_tc: "Touch Start", label_inspection: "Inspection", opt_off: "OFF",
+opt_on: "ON (15s)", label_decimals: "Decimals", del_confirm: "Are you sure?",
+save_success: "Saved!", id_limit: "ID can only be changed twice every 3 weeks!", msg_scramble: "Scramble:\n",
+label_friends: "Friends", label_requests: "Requests", label_target_id: "Target ID", btn_confirm: "Confirm",
+err_not_found: "User not found", err_self: "Cannot add yourself", msg_req_sent: "Request sent", btn_accept: "Accept", btn_delete: "Delete"
+},
+"ja": {
+not_logged_in: "未ログイン", history: "履歴",
+tab_account: "アカウント", tab_display: "表示", tab_timer: "タイマー",
+login_google: "Googleでログイン", label_name: "名前", label_id: "ID",
+save_btn: "変更を保存", logout_btn: "ログアウト", label_theme: "テーマ",
+label_lang: "言語", label_start_method: "開始方法", opt_kb: "キーボード (スペース)",
+opt_tc: "タッチ開始", label_inspection: "インスペクション", opt_off: "オフ",
+opt_on: "オン (15s)", label_decimals: "小数点以下", del_confirm: "削除しますか？",
+save_success: "保存しました", id_limit: "IDの変更は3週間に2回までです！", msg_scramble: "スクランブル：\n",
+label_friends: "フレンド", label_requests: "申請", label_target_id: "相手ID", btn_confirm: "確認",
+err_not_found: "ユーザーが見つかりません", err_self: "自分は追加できません", msg_req_sent: "申請を送りました", btn_accept: "承認", btn_delete: "削除"
+}
+};
+
+let currentLang = localStorage.getItem('wf_lang') || 'zh-TW';
+
+function updateLanguage() {
+const langData = i18n[currentLang];
+document.querySelectorAll('[data-i18n]').forEach(el => {
+const key = el.getAttribute('data-i18n');
+if (langData[key]) el.innerText = langData[key];
+});
+localStorage.setItem('wf_lang', currentLang);
+}
+
+document.getElementById('lang-select').value = currentLang;
+document.getElementById('lang-select').onchange = (e) => {
+currentLang = e.target.value;
+updateLanguage();
+};
+
+// --- 計時邏輯 ---
+let currentUser = null, allData = {}, currentEvent = "333", currentScramble = "";
+let timerState = "IDLE", startTime, timerInterval, holdTimeout, insInterval;
+
+const scramblers = {
+"333": () => genMoves(["U","D","L","R","F","B"], 20),
+"222": () => genMoves(["U","R","F"], 9),
+"444": () => genMoves(["U","D","L","R","F","B","Uw","Rw","Fw"], 40),
+"pyram": () => {
+let s = genMoves(["U","L","R","B"], 10);
+["u","l","r","b"].forEach(t => { if(Math.random()>0.5) s += ` ${t}${Math.random()>0.5?"'":""}`; });
+return s;
+},
+"minx": () => {
+let res = [];
+for(let i=0; i<7; i++) {
+let line = [];
+for(let j=0; j<10; j++) {
+let m = (j % 2 === 0) ? "R" : "D";
+let s = (Math.random() > 0.5) ? "++" : "--";
+line.push(m + s);
+}
+line.push(Math.random() > 0.5 ? "U" : "U'");
+res.push(line.join(" "));
+}
+return res.join("<br>");
+}
+};
+
+function genMoves(moves, len) {
+let res = [], last = "";
+for(let i=0; i<len; i++){
+let m = moves[Math.floor(Math.random()*moves.length)];
+while(m === last) m = moves[Math.floor(Math.random()*moves.length)];
+res.push(m + ["","'","2"][Math.floor(Math.random()*3)]); last = m;
+} return res.join(" ");
+}
+
+function generateScramble() {
+currentScramble = (scramblers[currentEvent] || scramblers["333"])();
+document.getElementById('scramble').innerHTML = currentScramble;
+}
+
+// --- UI 控制 ---
+window.switchTab = (e, paneId) => {
+document.querySelectorAll('#modal-settings .tab-link, #modal-settings .tab-pane').forEach(el => el.classList.remove('active'));
+e.target.classList.add('active');
+document.getElementById(paneId).classList.add('active');
+};
+
+window.switchSideTab = (e, paneId) => {
+document.querySelectorAll('.side-tab-link, #friend-section .tab-pane').forEach(el => el.classList.remove('active'));
+e.target.classList.add('active');
+document.getElementById(paneId).classList.add('active');
+};
+
+window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); };
+window.closeAllModals = () => document.querySelectorAll('.modal, .overlay').forEach(el => el.classList.remove('active'));
+
+function renderSolves() {
+const solves = allData[currentEvent] || [];
+const dec = document.getElementById('decimal-select').value;
+document.getElementById('solve-list-ui').innerHTML = solves.map((s, idx) => `
+<div class="solve-item" onclick="alert('${i18n[currentLang].msg_scramble}'+'${s.scramble.replace(/<br>/g, '\\n') || 'N/A'}')">
+<b>${s.time.toFixed(dec)}s</b>
+<span class="del-btn" onclick="deleteSolve(event, ${idx})">✕</span>
+</div>
+`).join('');
+
+const avg = (n) => {
+if(solves.length < n) return "--";
+const lastN = solves.slice(0, n).map(s => s.time);
+return (lastN.reduce((a,b)=>a+b, 0)/n).toFixed(3);
+};
+document.getElementById('ao5-val').innerText = avg(5);
+document.getElementById('ao12-val').innerText = avg(12);
+}
+
+window.deleteSolve = (e, idx) => {
+e.stopPropagation();
+if(confirm(i18n[currentLang].del_confirm)) {
+allData[currentEvent].splice(idx, 1);
+renderSolves();
+if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
+}
+};
+
+const display = document.getElementById('timer-display');
+
+function stopTimer() {
+clearInterval(timerInterval); timerState = "IDLE";
+const time = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
+if(!allData[currentEvent]) allData[currentEvent] = [];
+allData[currentEvent].unshift({ time, id: Date.now(), scramble: currentScramble });
+renderSolves(); generateScramble();
+if(currentUser) updateDoc(doc(db, "users", currentUser.uid), { allData });
+display.style.color = "var(--text)";
+}
+
+function startTimer() {
+clearInterval(insInterval);
+startTime = performance.now();
+timerInterval = setInterval(() => {
+display.innerText = ((performance.now()-startTime)/1000).toFixed(document.getElementById('decimal-select').value);
+}, 10);
+timerState = "RUNNING"; display.style.color = "var(--text)";
+}
+
+// 核心計時觸發邏輯
+function handleDown(e) {
+    if(e.type === 'keydown' && e.code !== 'Space') return;
+    if(e.type === 'touchstart' && document.getElementById('start-method').value !== 'tc') return;
+    if(e.target.closest('#social-bar') || e.target.closest('.modal') || e.target.closest('select')) return;
+
+    if(e.type === 'keydown') e.preventDefault();
+
+    if(timerState === "RUNNING") {
+        stopTimer();
+    } else if(timerState === "IDLE") {
+        timerState = "READY"; display.style.color = "var(--ready)";
+        holdTimeout = setTimeout(() => { 
+            timerState = "GO"; display.style.color = "var(--go)"; 
+            display.innerText = "0.000"; 
+        }, 500);
+    } else if(timerState === "INSPECTION") {
+        startTimer();
+    }
+}
+
+function handleUp(e) {
+    if(e.type === 'keyup' && e.code !== 'Space') return;
+    if(e.type === 'touchend' && document.getElementById('start-method').value !== 'tc') return;
+    
+    clearTimeout(holdTimeout);
+    if(timerState === "GO") {
+        const ins = document.getElementById('inspection-select').value;
+        if(ins > 0) {
+            timerState = "INSPECTION"; let left = ins; display.style.color = "var(--ready)";
+            display.innerText = left;
+            insInterval = setInterval(() => { left--; display.innerText = left; if(left<=0) startTimer(); }, 1000);
+        } else {
+            startTimer();
+        }
+    } else if(timerState === "READY") {
+        timerState = "IDLE"; display.style.color = "var(--text)";
+    }
+}
+
+window.onkeydown = handleDown;
+window.onkeyup = handleUp;
+document.addEventListener('touchstart', handleDown, {passive: false});
+document.addEventListener('touchend', handleUp, {passive: false});
+
+// --- 好友與即時聊天系統 ---
+let chatUnsubscribe = null;
+let currentChatUid = null;
+
+async function renderRequests(incoming) {
+const ui = document.getElementById('requests-list-ui');
+if(!incoming || incoming.length === 0) { ui.innerText = "尚無申請"; return; }
+ui.innerHTML = "";
+for(let uid of incoming) {
+const snap = await getDoc(doc(db, "users", uid));
+const d = snap.data();
+const div = document.createElement('div');
+div.className = "req-item";
+div.innerHTML = `<span>${d.displayName} (#${d.customID})</span>
+<div class="req-btns">
+<button class="mini-btn" style="background:var(--go)" onclick="handleFriend('${uid}', 'accept')">${i18n[currentLang].btn_accept}</button>
+<button class="mini-btn" style="background:var(--ready)" onclick="handleFriend('${uid}', 'reject')">${i18n[currentLang].btn_delete}</button>
+</div>`;
 ui.appendChild(div);
 }
 }
 
-async function pinFriend(uid){
-await updateDoc(doc(db,"users",me.uid),{friendsPinned:[uid]});
+async function renderFriends(friends) {
+const ui = document.getElementById('friends-list-ui');
+if(!friends || friends.length === 0) { ui.innerText = "尚無好友"; return; }
+ui.innerHTML = "";
+for(let uid of friends) {
+const snap = await getDoc(doc(db, "users", uid));
+const d = snap.data();
+const div = document.createElement('div');
+div.className = "req-item";
+div.onclick = () => openSidebarChat(uid, d.displayName);
+div.innerHTML = `<span>${d.displayName} (#${d.customID})</span>`;
+ui.appendChild(div);
+}
 }
 
-async function removeFriend(uid){
-await updateDoc(doc(db,"users",me.uid),{friends:[]});
+window.handleFriend = async (targetUid, action) => {
+const myRef = doc(db, "users", currentUser.uid);
+const targetRef = doc(db, "users", targetUid);
+if(action === 'accept') {
+await updateDoc(myRef, { friends: arrayUnion(targetUid), incomingRequests: arrayRemove(targetUid) });
+await updateDoc(targetRef, { friends: arrayUnion(currentUser.uid) });
+} else {
+await updateDoc(myRef, { incomingRequests: arrayRemove(targetUid) });
 }
-
-async function blockFriend(uid){
-await updateDoc(doc(db,"users",me.uid),{blockedUsers:[uid]});
-}
-
-function openChat(uid,name){
-currentChat=uid;
-document.getElementById("sidebar-friends-view").style.display="none";
-document.getElementById("sidebar-chat-view").style.display="flex";
-const cid=[me.uid,uid].sort().join("_");
-if(unsub)unsub();
-unsub=onSnapshot(collection(db,"chats",cid,"messages"),s=>{
-const box=document.getElementById("chat-msgs-container");
-box.innerHTML="";
-s.forEach(d=>{
-const m=d.data();
-const div=document.createElement("div");
-div.className="side-msg "+(m.sender===me.uid?"mine":"theirs");
-div.textContent=m.text;
-if(m.sender===me.uid){
-div.onclick=()=>{
-const t=prompt("編輯訊息",m.text);
-if(t!==null)updateDoc(doc(db,"chats",cid,"messages",d.id),{text:t});
 };
-div.oncontextmenu=e=>{
-e.preventDefault();
-if(confirm("刪除？"))deleteDoc(doc(db,"chats",cid,"messages",d.id));
+
+document.getElementById('send-request-btn').onclick = async () => {
+if(!currentUser) return;
+const targetID = document.getElementById('target-friend-id').value;
+const q = query(collection(db, "users"), where("customID", "==", targetID));
+const snap = await getDocs(q);
+if(snap.empty) return alert(i18n[currentLang].err_not_found);
+const targetDoc = snap.docs[0];
+if(targetDoc.id === currentUser.uid) return alert(i18n[currentLang].err_self);
+await updateDoc(doc(db, "users", targetDoc.id), { incomingRequests: arrayUnion(currentUser.uid) });
+alert(i18n[currentLang].msg_req_sent);
+document.getElementById('target-friend-id').value = "";
 };
-}
-box.appendChild(div);
-});
-box.scrollTop=box.scrollHeight;
+
+async function openSidebarChat(uid, name) {
+currentChatUid = uid;
+document.getElementById('chat-title-name').innerText = name;
+document.getElementById('sidebar-friends-view').style.display = 'none';
+document.getElementById('sidebar-chat-view').classList.add('active');
+
+const chatId = [currentUser.uid, uid].sort().join("_");
+const chatRef = collection(db, "chats", chatId, "messages");
+const q = query(chatRef, orderBy("timestamp", "asc"));
+
+if(chatUnsubscribe) chatUnsubscribe();
+chatUnsubscribe = onSnapshot(q, (snapshot) => {
+    const container = document.getElementById('chat-msgs-container');
+    container.innerHTML = "";
+    snapshot.forEach(d => {
+        const msg = d.data();
+        const div = document.createElement('div');
+        div.className = `side-msg ${msg.senderId === currentUser.uid ? 'mine' : 'theirs'}`;
+        div.innerText = msg.text;
+        container.appendChild(div);
+    });
+    container.scrollTop = container.scrollHeight;
 });
 }
 
-function closeChat(){
-if(unsub)unsub();
-document.getElementById("sidebar-chat-view").style.display="none";
-document.getElementById("sidebar-friends-view").style.display="block";
+window.closeSidebarChat = () => {
+if(chatUnsubscribe) chatUnsubscribe();
+currentChatUid = null;
+document.getElementById('sidebar-chat-view').classList.remove('active');
+document.getElementById('sidebar-friends-view').style.display = 'flex';
+};
+
+document.getElementById('side-chat-send').onclick = sendChatMessage;
+document.getElementById('side-chat-input').onkeydown = (e) => { if(e.key==='Enter') sendChatMessage(); };
+
+async function sendChatMessage() {
+const input = document.getElementById('side-chat-input');
+const text = input.value.trim();
+if(!text || !currentChatUid) return;
+
+const chatId = [currentUser.uid, currentChatUid].sort().join("_");
+await addDoc(collection(db, "chats", chatId, "messages"), {
+    senderId: currentUser.uid,
+    text: text,
+    timestamp: serverTimestamp()
+});
+input.value = "";
 }
 
-async function sendMsg(){
-const t=document.getElementById("chat-input").value.trim();
-if(!t)return;
-const cid=[me.uid,currentChat].sort().join("_");
-await addDoc(collection(db,"chats",cid,"messages"),{
-sender:me.uid,text:t,ts:serverTimestamp()
-});
-document.getElementById("chat-input").value="";
+// --- Firebase 核心監聽 ---
+onAuthStateChanged(auth, async user => {
+if(user) {
+currentUser = user;
+document.getElementById('login-section').style.display = 'none';
+document.getElementById('profile-section').style.display = 'block';
+document.getElementById('display-name-sidebar').innerText = user.displayName || "User";
+
+const userRef = doc(db, "users", user.uid);
+const snap = await getDoc(userRef);
+
+if(!snap.exists()){
+await setDoc(userRef, { displayName: user.displayName || "Cuber", customID: user.uid.slice(0, 6), allData: {}, idUpdates: [], friends: [], incomingRequests: [] });
 }
+
+onSnapshot(userRef, s => {
+if(s.exists()){
+const d = s.data();
+allData = d.allData || {};
+document.getElementById('display-name-sidebar').innerText = d.displayName;
+document.getElementById('display-id-sidebar').innerText = "#" + d.customID;
+document.getElementById('name-input').value = d.displayName;
+document.getElementById('id-input').value = d.customID;
+renderSolves();
+renderRequests(d.incomingRequests);
+renderFriends(d.friends);
+}
+});
+} else {
+currentUser = null;
+allData = {};
+document.getElementById('login-section').style.display = 'block';
+document.getElementById('profile-section').style.display = 'none';
+document.getElementById('display-name-sidebar').innerText = i18n[currentLang].not_logged_in;
+document.getElementById('display-id-sidebar').innerText = "#Guest";
+document.getElementById('solve-list-ui').innerHTML = "";
+document.getElementById('requests-list-ui').innerText = "請先登入";
+document.getElementById('friends-list-ui').innerText = "請先登入";
+renderSolves();
+}
+});
+
+document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
+document.getElementById('logout-btn').onclick = () => signOut(auth).then(()=>location.reload());
+
+document.getElementById('save-profile').onclick = async () => {
+if(!currentUser) return;
+const userRef = doc(db, "users", currentUser.uid);
+const snap = await getDoc(userRef);
+const data = snap.data();
+let updates = data.idUpdates || [];
+const now = Date.now();
+updates = updates.filter(t => now - t < 21 * 24 * 60 * 60 * 1000);
+const newID = document.getElementById('id-input').value;
+if(data.customID !== newID){
+if(updates.length >= 2) return alert(i18n[currentLang].id_limit);
+updates.push(now);
+}
+await updateDoc(userRef, { displayName: document.getElementById('name-input').value, customID: newID, idUpdates: updates });
+alert(i18n[currentLang].save_success);
+};
+
+document.getElementById('event-selector').onchange = (e) => { currentEvent = e.target.value; generateScramble(); renderSolves(); };
+document.getElementById('hide-sidebar-btn').onclick = () => { document.getElementById('social-bar').classList.add('collapsed'); document.getElementById('show-sidebar-btn').style.display='flex'; };
+document.getElementById('show-sidebar-btn').onclick = () => { document.getElementById('social-bar').classList.remove('collapsed'); document.getElementById('show-sidebar-btn').style.display='none'; };
+
+updateLanguage();
+generateScramble();
 </script>
 </body>
 </html>
